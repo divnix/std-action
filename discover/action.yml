@@ -1,0 +1,38 @@
+name: "Standard Discovery"
+description: "Find out what to build & run in a Standard project."
+
+inputs:
+  github_pat:
+    description: "GitHub token for accessing private repos."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  hits:
+    description: "List of CI actions to run."
+    value: ${{ steps.eval.outputs.json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v18
+      with:
+        extra_nix_config: |
+          accept-flake-config = true
+          trusted-users = runner
+          access-tokens = github.com=${{ inputs.github_pat }}
+
+    - name: Discover
+      id: eval
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: |
+        ${{ github.action_path }}/eval.sh
+      shell: bash
+
+    - name: Cache Hits
+      uses: actions/upload-artifact@v3.1.1
+      with:
+        name: discovery-${{ github.sha }}
+        path: ${{ runner.temp }}/discovery.tar.zstd
