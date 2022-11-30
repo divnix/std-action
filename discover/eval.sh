@@ -10,11 +10,11 @@ function eval() {
   local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  JSON="$(nix eval ".#__std.ci.$system" --json)"
+  JSON="$(nix eval "$FLAKE#__std.ci.$system" --json)"
 
   echo "json=$JSON" >> "$GITHUB_OUTPUT"
 
-  echo "nix_conf=$(nix eval --raw .#__std.nixConfig)" >> "$GITHUB_OUTPUT"
+  echo "nix_conf=$(nix eval --raw "$FLAKE#__std.nixConfig")" >> "$GITHUB_OUTPUT"
 
   echo "::debug::$JSON"
 
