@@ -56,8 +56,11 @@ runs:
         NIX_KEY_PATH=${{ inputs.key_path }}
         BUILDER=${{ inputs.builder }}
         CACHE=${{ inputs.cache }}
-        JSON=${{ inputs.json }}
         $delim
+
+        echo "JSON<<$delim" >> $GITHUB_ENV
+        echo '${{ inputs.json }}' >> $GITHUB_ENV
+        echo "$delim" >> $GITHUB_ENV
       shell: bash
 
     - name: Emplace Secrets
