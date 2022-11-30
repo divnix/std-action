@@ -81,16 +81,16 @@ runs:
         sudo chmod 0600 /etc/ssh/ssh_known_hosts
       shell: bash
 
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v3.0.1
       with:
         name: discovery-${{ github.sha }}
-        path: ${{ runner.temp }}/discovery.tar.zstd
+        path: ${{ runner.temp }}/discovery
 
-    - name: Unpack Discovery
+    - name: Import Discovery
       env:
         NIX_KEY_PATH: ${{ inputs.key_path }}
         TMPDIR: ${{ runner.temp }}
-      run: ${{ github.action_path }}/unpack.sh
+      run: ${{ github.action_path }}/import.sh
       shell: bash
 
     - name: Build ${{ fromJSON(inputs.json).name }}
