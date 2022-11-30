@@ -46,12 +46,25 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Set Environment
+      run: |
+        delim=$RANDOM
+
+        cat << $delim >> "$GITHUB_ENV"
+        DISC_PATH=${{ runner.temp }}/discovery
+        SSH_AUTH_SOCK=${{ runner.temp }}/ssh_agent.sock
+        NIX_KEY_PATH=${{ inputs.key_path }}
+        BUILDER=${{ inputs.builder }}
+        CACHE=${{ inputs.cache }}
+        JSON=${{ inputs.json }}
+        $delim
+      shell: bash
+
     - name: Emplace Secrets
       run: ${{ github.action_path }}/secrets.sh
       shell: bash
       env:
         NIX_SECRET_KEY: ${{ inputs.nix_key }}
-        NIX_KEY_PATH: ${{ inputs.key_path }}
         AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
 
@@ -62,13 +75,11 @@ runs:
           accept-flake-config = true
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}
-          secret-key-files = ${{ inputs.key_path }}
+          secret-key-files = ${{ env.NIX_KEY_PATH }}
           ${{ inputs.extra_nix_config }}
 
     - name: Setup SSH Keys
       if: inputs.nix_ssh_key != 'none' && inputs.builder != 'auto'
-      env:
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       run: |
         ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
         ssh-add - <<< "${{ inputs.nix_ssh_key }}"
@@ -84,39 +95,26 @@ runs:
     - uses: actions/download-artifact@v3.0.1
       with:
         name: discovery-${{ github.sha }}
-        path: ${{ runner.temp }}/discovery
+        path: ${{ env.DISC_PATH }}
 
     - name: Import Discovery
-      env:
-        NIX_KEY_PATH: ${{ inputs.key_path }}
-        TMPDIR: ${{ runner.temp }}
       run: ${{ github.action_path }}/import.sh
       shell: bash
 
-    - name: Build ${{ fromJSON(inputs.json).name }}
+    - name: Build ${{ fromJSON(env.JSON).name }}
       id: build
-      env:
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-        BUILDER: ${{ inputs.builder }}
-        JSON: ${{ inputs.json }}
       run: |
         ${{ github.action_path }}/build.sh
       shell: bash
 
-    - name: ${{ fromJSON(inputs.json).action }}
-      if: ${{ fromJSON(inputs.json).action }} != 'build'
+    - name: ${{ fromJSON(env.JSON).action }}
+      if: ${{ fromJSON(env.JSON).action }} != 'build'
       run: |
         ${{ github.action_path }}/run.sh
       shell: bash
 
     - name: Populate Cache
-      if: inputs.cache != 'auto' && inputs.nix_key != ''
-      env:
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-        BUILDER: ${{ inputs.builder }}
-        CACHE: ${{ inputs.cache }}
-        NIX_KEY: ${{ inputs.key_path }}
-        UNCACHED: ${{ steps.build.outputs.uncached }}
+      if: env.CACHE != 'auto' && inputs.nix_key != ''
       run: |
         ${{ github.action_path }}/cache.sh
       shell: bash

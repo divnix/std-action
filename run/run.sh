@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
 
-action="$(jq .action <<< "$JSON")"
+set -e
+shopt -s lastpipe
 
-echo "::group::Running $action"
+function run() {
+  local action drv
 
-drv="$(jq .actionDrv <<< "$JSON")"
+  jq -r '.action + " " + .actionDrv' <<< "$JSON" | read -r action drv
 
-if [[ $BUILDER != auto ]]; then
-  nix copy --from "$BUILDER" --to auto "$drv"
-fi
-eval "$(nix show-derivation "$drv" | jq -r '.[].outputs.out.path')"
+  echo "::group::Running $action"
 
-echo "::endgroup::"
+  if [[ $BUILDER != auto ]]; then
+    nix copy --from "$BUILDER" --to auto "$drv"
+  fi
+
+  # run the action script
+  eval "$(nix show-derivation "$drv" | jq -r '.[].outputs.out.path')"
+
+  echo "::endgroup::"
+}
+
+run

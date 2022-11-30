@@ -1,32 +1,42 @@
 #!/usr/bin/env bash
 
-eval_store="$TMPDIR/eval"
+set -e
 
-# ---------------------------------------------------------------------
+declare JSON
 
-echo "::group::Nix Evaluation"
+function eval() {
+  echo "::group::Nix Evaluation"
 
-ci_json="$(nix eval .#__std.ci."$(nix eval --raw --impure --expr 'builtins.currentSystem')" --json)"
+  local system
 
-echo "json=$ci_json" >> "$GITHUB_OUTPUT"
+  system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
+  JSON="$(nix eval ".#__std.ci.$system" --json)"
 
-echo "nix_conf=$(nix eval --raw .#__std.nixConfig)" >> "$GITHUB_OUTPUT"
+  echo "json=$JSON" >> "$GITHUB_OUTPUT"
 
-echo "::debug::$ci_json"
-echo "::endgroup::"
+  echo "nix_conf=$(nix eval --raw .#__std.nixConfig)" >> "$GITHUB_OUTPUT"
 
-# ---------------------------------------------------------------------
+  echo "::debug::$JSON"
 
-echo "::group::Archive Eval Store"
+  echo "::endgroup::"
+}
 
-#shellcheck disable=SC2046
-nix copy \
-  --no-check-sigs \
-  --derivation \
-  --no-auto-optimise-store \
-  --to "$eval_store" \
-  $(jq -r '.[]|to_entries[]|select(.key|test("Drv$"))|select(.value|.!=null)|.value' <<< "$ci_json")
+function archive() {
+  echo "::group::Archive Eval Store"
 
-tar -C "$eval_store" --zstd -f "$TMPDIR/discovery.tar.zstd" -c .
+  #shellcheck disable=SC2046
+  nix copy \
+    --no-check-sigs \
+    --derivation \
+    --no-auto-optimise-store \
+    --to "$DISC_PATH" \
+    $(jq -r '.[]|to_entries[]|select(.key|test("Drv$"))|select(.value|.!=null)|.value' <<< "$JSON")
 
-echo "::endgroup::"
+  tar -C "$DISC_PATH" --zstd -f "$DISC_ARC_PATH" -c .
+
+  echo "::endgroup::"
+}
+
+eval
+
+archive

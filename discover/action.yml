@@ -15,6 +15,16 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Set Environment
+      run: |
+        delim=$RANDOM
+
+        cat << $delim >> "$GITHUB_ENV"
+        DISC_PATH=${{ runner.temp }}/discovery
+        DISC_ARC_PATH=${{ runner.temp }}/discovery.tar.zstd
+        $delim
+      shell: bash
+
     - name: Install Nix
       uses: cachix/install-nix-action@v18
       with:
@@ -25,8 +35,6 @@ runs:
 
     - name: Discover
       id: eval
-      env:
-        TMPDIR: ${{ runner.temp }}
       run: |
         ${{ github.action_path }}/eval.sh
       shell: bash
@@ -35,4 +43,4 @@ runs:
       uses: actions/upload-artifact@v3.1.1
       with:
         name: discovery-${{ github.sha }}
-        path: ${{ runner.temp }}/discovery.tar.zstd
+        path: ${{ env.DISC_ARC_PATH }}
