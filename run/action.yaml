@@ -1,0 +1,122 @@
+name: "Sandard Action Runner"
+description: "Run a Standard action."
+
+inputs:
+  key_path:
+    description: "The path to place the Nix secret key."
+    required: false
+    default: "${{ runner.temp }}/.nix-key"
+  github_pat:
+    description: "GitHub token for accessing private repos."
+    required: false
+    default: ${{ github.token }}
+  nix_key:
+    description: "Secret key used for Nix package signing."
+    required: false
+  s3_key:
+    description: "Key to upload to S3 Buckets with Nix."
+    required: false
+  s3_id:
+    description: "ID to upload to S3 Buckets with Nix."
+    required: false
+  cache:
+    description: "Nix cache to optionally upload artifacts to"
+    # auto refers to the local nix store, so nothing is uploaded by default
+    default: auto
+    required: false
+  builder:
+    description: "Nix store to build on."
+    default: auto
+    required: true
+  json:
+    description: "JSON describing the action, found in the discovery phase."
+    required: true
+  nix_ssh_key:
+    description: "SSH private key to send builds to a remote Nix builder."
+    default: none
+    required: false
+  ssh_known_hosts:
+    description: "SSH known host keys for Nix builders"
+    default: none
+    required: false
+  extra_nix_config:
+    description: "Configuration to append to the nix.conf."
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Emplace Secrets
+      run: ${{ github.action_path }}/secrets.sh
+      shell: bash
+      env:
+        NIX_SECRET_KEY: ${{ inputs.nix_key }}
+        NIX_KEY_PATH: ${{ inputs.key_path }}
+        AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v18
+      with:
+        extra_nix_config: |
+          accept-flake-config = true
+          trusted-users = runner
+          access-tokens = github.com=${{ inputs.github_pat }}
+          secret-key-files = ${{ inputs.key_path }}
+          ${{ inputs.extra_nix_config }}
+
+    - name: Setup SSH Keys
+      if: inputs.nix_ssh_key != 'none' && inputs.builder != 'auto'
+      env:
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+      run: |
+        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
+      shell: bash
+
+    - name: Setup SSH Known Hosts
+      if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none' && inputs.builder != 'auto'
+      run: |
+        sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
+        sudo chmod 0600 /etc/ssh/ssh_known_hosts
+      shell: bash
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: discovery-${{ github.sha }}
+        path: ${{ runner.temp }}/discovery.tar.zstd
+
+    - name: Unpack Discovery
+      env:
+        NIX_KEY_PATH: ${{ inputs.key_path }}
+        TMPDIR: ${{ runner.temp }}
+      run: ${{ github.action_path }}/unpack.sh
+      shell: bash
+
+    - name: Build ${{ fromJSON(inputs.json).name }}
+      id: build
+      env:
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        BUILDER: ${{ inputs.builder }}
+        JSON: ${{ inputs.json }}
+      run: |
+        ${{ github.action_path }}/build.sh
+      shell: bash
+
+    - name: ${{ fromJSON(inputs.json).action }}
+      if: ${{ fromJSON(inputs.json).action }} != 'build'
+      run: |
+        ${{ github.action_path }}/run.sh
+      shell: bash
+
+    - name: Populate Cache
+      if: inputs.cache != 'auto' && inputs.nix_key != ''
+      env:
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        BUILDER: ${{ inputs.builder }}
+        CACHE: ${{ inputs.cache }}
+        NIX_KEY: ${{ inputs.key_path }}
+        UNCACHED: ${{ steps.build.outputs.uncached }}
+      run: |
+        ${{ github.action_path }}/cache.sh
+      shell: bash
