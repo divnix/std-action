@@ -10,8 +10,9 @@ function run() {
 
   echo "::group::Running $action"
 
-  if [[ $BUILDER != auto ]]; then
-    nix copy --no-check-sigs --from "$BUILDER" --to auto "$drv"
+  if ! [[ $BUILT =~ $drv ]]; then
+    # should be fetched, since we have already checked cache status in build step
+    nix-build "$drv" --no-out-link
   fi
 
   # run the action script
