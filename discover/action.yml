@@ -27,7 +27,7 @@ runs:
 
     - name: Cache Nix Store
       id: cache-nix
-      uses: actions/cache@v3.0.11
+      uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: /nix
         key: ${{ runner.os }}-${{ github.repository }}-discovery
