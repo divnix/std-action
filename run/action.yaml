@@ -65,6 +65,7 @@ runs:
       shell: bash
 
     - name: Emplace Secrets
+      if: inputs.nix_key != '' || inputs.s3_id != '' || inputs.s3_key != ''
       run: ${{ github.action_path }}/secrets.sh
       shell: bash
       env:
