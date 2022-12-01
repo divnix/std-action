@@ -4,11 +4,11 @@ set -e
 
 DRVS=$(jq -r '.|to_entries[]|select(.key|test("Drv$"))|select(.value|.!=null)|.value' <<< "$JSON")
 declare -r DRVS
+declare -a unbuilt
 
 function calc_uncached() {
   echo "::group::Calculate Uncached Builds"
 
-  declare -a unbuilt
   for drv in "${DRVS[@]}"; do
     # if the line grepped for doesn't show in the output, then there is nothing to build that isn't already cached
     if nix-store --realise "$drv" --dry-run 2>&1 | grep --silent 'derivations will be built:$'; then
