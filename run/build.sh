@@ -19,14 +19,14 @@ function calc_uncached() {
 }
 
 
+#shellcheck disable=SC2068
 function build() {
   echo "::group::Nix Build"
 
   #shellcheck disable=SC2086
   printf "%s\n" "::debug::these paths will be built:" $DRVS
 
-  #shellcheck disable=SC2086
-  NIX_CONFIG=$(printf "%s\n" "eval-store = auto" "store = $BUILDER")  nix-store --realise $DRVS
+  nix-build --eval-store auto --store "$BUILDER" ${unbuilt[@]}
 
   echo "::endgroup::"
 }

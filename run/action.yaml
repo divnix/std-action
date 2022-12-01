@@ -92,7 +92,9 @@ runs:
       if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none' && inputs.builder != 'auto'
       run: |
         sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
-        sudo chmod 0600 /etc/ssh/ssh_known_hosts
+        sudo chmod 0644 /etc/ssh/ssh_known_hosts
+
+        echo "::debug::uploading$(</etc/ssh/ssh_known_hosts)"
       shell: bash
 
     - uses: actions/download-artifact@v3.0.1
