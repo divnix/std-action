@@ -2,6 +2,8 @@
 
 set -e
 
+AWS_SHARED_CREDENTIALS_FILE="$HOME/.aws/credentials"
+
 function mk_nix() {
   echo "::group::Make Nix secret key."
 
@@ -14,8 +16,6 @@ function mk_nix() {
 
 function mk_aws() {
   echo "::group::Make S3 credentials file."
-
-  local AWS_SHARED_CREDENTIALS_FILE="$HOME/.aws/credentials"
 
   mkdir -p "${AWS_SHARED_CREDENTIALS_FILE%/*}"
 
