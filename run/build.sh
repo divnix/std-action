@@ -8,8 +8,13 @@ declare -r DRVS
 function calc_uncached() {
   echo "::group::Calculate Uncached Builds"
 
-  #shellcheck disable=SC2086
-  mapfile -s 1 -t unbuilt < <(nix-store --realise --dry-run $DRVS 2>&1 | sed '/paths will be fetched/,$ d')
+  declare -a unbuilt
+  for drv in "${DRVS[@]}"; do
+    # if the line grepped for doesn't show in the output, then there is nothing to build that isn't already cached
+    if nix-store --realise "$drv" --dry-run 2>&1 | grep --silent 'derivations will be built:$'; then
+      unbuilt+=("$drv")
+    fi
+  done
 
   echo "::debug::uncached paths: ${unbuilt[*]}"
 
