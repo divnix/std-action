@@ -72,6 +72,15 @@ runs:
         AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
 
+    - uses: actions/download-artifact@v3.0.1
+      with:
+        name: discovery-${{ github.sha }}
+        path: ${{ runner.temp }}
+
+    - name: Import Discovery
+      run: ${{ github.action_path }}/import.sh
+      shell: bash
+
     - name: Install Nix
       uses: cachix/install-nix-action@v18
       with:
@@ -94,17 +103,6 @@ runs:
       run: |
         sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
         sudo chmod 0644 /etc/ssh/ssh_known_hosts
-
-        echo "::debug::uploading$(</etc/ssh/ssh_known_hosts)"
-      shell: bash
-
-    - uses: actions/download-artifact@v3.0.1
-      with:
-        name: discovery-${{ github.sha }}
-        path: ${{ runner.temp }}
-
-    - name: Import Discovery
-      run: ${{ github.action_path }}/import.sh
       shell: bash
 
     - name: Build ${{ fromJSON(env.JSON).name }}
