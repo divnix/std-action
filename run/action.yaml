@@ -52,6 +52,7 @@ runs:
 
         cat << $delim >> "$GITHUB_ENV"
         DISC_PATH=${{ runner.temp }}/discovery
+        DISC_ARC_PATH=${{ runner.temp }}/discovery.tar.zstd
         SSH_AUTH_SOCK=${{ runner.temp }}/ssh_agent.sock
         NIX_KEY_PATH=${{ inputs.key_path }}
         BUILDER=${{ inputs.builder }}
@@ -100,7 +101,7 @@ runs:
     - uses: actions/download-artifact@v3.0.1
       with:
         name: discovery-${{ github.sha }}
-        path: ${{ env.DISC_PATH }}
+        path: ${{ runner.temp }}
 
     - name: Import Discovery
       run: ${{ github.action_path }}/import.sh
