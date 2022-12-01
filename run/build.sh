@@ -9,7 +9,8 @@ declare -a unbuilt
 function calc_uncached() {
   echo "::group::Calculate Uncached Builds"
 
-  for drv in "${DRVS[@]}"; do
+  #shellcheck disable=SC2068
+  for drv in ${DRVS[@]}; do
     # if the line grepped for doesn't show in the output, then there is nothing to build that isn't already cached
     if nix-store --realise "$drv" --dry-run 2>&1 | grep --silent 'derivations will be built:$'; then
       unbuilt+=("$drv")

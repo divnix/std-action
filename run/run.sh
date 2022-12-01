@@ -13,6 +13,8 @@ function run() {
   if ! [[ $BUILT =~ $drv ]]; then
     # should be fetched, since we have already checked cache status in build step
     nix-build "$drv" --no-out-link
+  elif [[ $BUILDER != auto ]]; then
+    nix copy --from "$BUILDER" "$drv"
   fi
 
   # run the action script
