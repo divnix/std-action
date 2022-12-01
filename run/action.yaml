@@ -120,7 +120,7 @@ runs:
     - name: Populate Cache
       env:
         UNCACHED: ${{ steps.build.outputs.uncached }}
-      if: env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != ''
+      if: always() && env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
         ${{ github.action_path }}/cache.sh
       shell: bash
