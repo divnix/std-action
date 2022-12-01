@@ -28,10 +28,14 @@ function calc_uncached() {
 function build() {
   echo "::group::Nix Build"
 
-  #shellcheck disable=SC2086
-  echo "::debug::these paths will be built: $DRVS"
+  if [[ -n ${unbuilt[*]} ]]; then
+    #shellcheck disable=SC2086
+    echo "::debug::these paths will be built: $DRVS"
 
-  nix-build --eval-store auto --store "$BUILDER" ${unbuilt[@]}
+    nix-build --eval-store auto --store "$BUILDER" ${unbuilt[@]}
+  else
+    echo "Everything already cached, nothing to build."
+  fi
 
   echo "::endgroup::"
 }
