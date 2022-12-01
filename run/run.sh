@@ -11,7 +11,7 @@ function run() {
   echo "::group::Running $action"
 
   if [[ $BUILDER != auto ]]; then
-    nix copy --from "$BUILDER" --to auto "$drv"
+    nix copy --no-check-sigs --from "$BUILDER" --to auto "$drv"
   fi
 
   # run the action script

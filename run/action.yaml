@@ -114,13 +114,15 @@ runs:
       shell: bash
 
     - name: ${{ fromJSON(env.JSON).action }}
-      if: ${{ fromJSON(env.JSON).action }} != 'build'
+      if: fromJSON(env.JSON).action != 'build'
       run: |
         ${{ github.action_path }}/run.sh
       shell: bash
 
     - name: Populate Cache
-      if: env.CACHE != 'auto' && inputs.nix_key != ''
+      env:
+        UNCACHED: ${{ steps.build.outputs.uncached }}
+      if: env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != ''
       run: |
         ${{ github.action_path }}/cache.sh
       shell: bash

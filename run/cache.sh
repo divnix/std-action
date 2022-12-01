@@ -8,7 +8,7 @@ function upload() {
   echo "::debug::uploading$UNCACHED"
 
   if [[ $CACHE =~ ^s3:// ]]; then
-    if [[ $CACHE =~ ? ]]; then
+    if [[ $CACHE =~ \? ]]; then
       CACHE="$CACHE&secret-key=$NIX_KEY_PATH"
     else
       CACHE="$CACHE?secret-key=$NIX_KEY_PATH"
