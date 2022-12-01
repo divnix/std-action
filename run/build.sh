@@ -11,7 +11,7 @@ function calc_uncached() {
   #shellcheck disable=SC2086
   mapfile -s 1 -t unbuilt < <(nix-store --realise --dry-run $DRVS 2>&1 | sed '/paths will be fetched/,$ d')
 
-  printf "%s\n" "::debug::uncached paths:" "${unbuilt[@]}"
+  echo "::debug::uncached paths: ${unbuilt[*]}"
 
   echo "uncached=${unbuilt[*]}" >> "$GITHUB_OUTPUT"
 
@@ -24,7 +24,7 @@ function build() {
   echo "::group::Nix Build"
 
   #shellcheck disable=SC2086
-  printf "%s\n" "::debug::these paths will be built:" $DRVS
+  echo "::debug::these paths will be built: $DRVS"
 
   nix-build --eval-store auto --store "$BUILDER" ${unbuilt[@]}
 

@@ -5,7 +5,7 @@ set -e
 function upload() {
   echo "::group::Upload to Cache"
 
-  printf "%s\n" "::debug::uploading:" "$UNCACHED"
+  echo "::debug::uploading$UNCACHED"
 
   if [[ $CACHE =~ ^s3:// ]]; then
     if [[ $CACHE =~ ? ]]; then
