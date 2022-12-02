@@ -1,5 +1,5 @@
 name: "Sandard Action Runner"
-description: "Run a Standard action."
+description: "Build a target and run its action."
 
 inputs:
   key_path:
@@ -112,7 +112,7 @@ runs:
         ${{ github.action_path }}/build.sh
       shell: bash
 
-    - name: ${{ fromJSON(env.JSON).action }}
+    - name: ${{ fromJSON(env.JSON).action }} ${{ fromJSON(env.JSON).name }}
       if: fromJSON(env.JSON).action != 'build'
       env:
         BUILT: ${{ steps.build.outputs.uncached }}

@@ -10,7 +10,22 @@ function eval() {
   local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  JSON="$(nix eval "$FLAKE#__std.ci.$system" --json)"
+  JSON="$(
+    nix eval "$FLAKE#__std.ci'.$system" --json | jq '
+      group_by(.block)
+      | map({
+        key: .[0].block,
+        value: (
+          group_by(.action)
+          | map({
+            key: .[0].action,
+            value: .
+          })
+          | from_entries
+        )
+      })
+      | from_entries'
+  )"
 
   echo "json=$JSON" >> "$GITHUB_OUTPUT"
 
@@ -22,7 +37,7 @@ function eval() {
 }
 
 function archive() {
-  echo "::group::Archive Eval Store"
+  echo "::group::Archive Evaluation Result"
 
   #shellcheck disable=SC2046
   nix copy \
