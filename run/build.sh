@@ -6,6 +6,8 @@ DRVS=$(jq -r '.|to_entries[]|select(.key|test("Drv$"))|select(.value|.!=null)|.v
 declare -r DRVS
 declare -a unbuilt uncached
 
+echo "::debug::$(nix show-config)"
+
 function calc_uncached() {
   echo "::group::Calculate Uncached Builds"
 

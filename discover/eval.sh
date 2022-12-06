@@ -38,6 +38,7 @@ function eval() {
     >> "$GITHUB_OUTPUT"
 
   echo "::debug::$JSON"
+  echo "::debug::${nix_conf[*]}"
 
   echo "::endgroup::"
 }

@@ -87,6 +87,7 @@ runs:
       uses: cachix/install-nix-action@v18
       with:
         extra_nix_config: |
+          show-trace = true
           accept-flake-config = true
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}
