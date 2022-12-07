@@ -116,7 +116,7 @@ runs:
     - name: ${{ fromJSON(env.JSON).action }} ${{ fromJSON(env.JSON).name }}
       if: fromJSON(env.JSON).action != 'build'
       env:
-        BUILT: ${{ steps.build.outputs.built }}
+        BUILT: ${{ steps.build.outputs.uncached }}
       run: |
         ${{ github.action_path }}/run.sh
       shell: bash

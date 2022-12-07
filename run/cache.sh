@@ -15,8 +15,7 @@ function upload() {
     fi
   fi
 
-  #shellcheck disable=SC2086
-  echo $UNCACHED | xargs nix copy --from "$BUILDER" --to "$CACHE"
+  echo "$UNCACHED" | xargs -- nix copy --from "$BUILDER" --to "$CACHE"
 
   echo "::endgroup::"
 }
