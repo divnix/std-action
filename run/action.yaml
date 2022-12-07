@@ -73,10 +73,15 @@ runs:
         AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
 
-    - uses: actions/download-artifact@v3.0.1
+    - name: Restore Cache & Discovery Results
+      id: restore-cache
+      uses: actions/cache@v3
       with:
-        name: discovery-${{ github.sha }}
-        path: ${{ runner.temp }}
+        path: |
+          /nix
+          ${{ runner.temp }}/discovery
+        restore-keys: |
+          discovery-${{ runner.os }}-${{ github.ref }}-${{ github.sha }}
 
     - name: Import Discovery
       run: ${{ github.action_path }}/import.sh
