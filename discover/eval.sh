@@ -7,7 +7,7 @@ declare JSON
 function eval() {
   echo "::group::Nix Evaluation"
 
-  local system
+  local system delim
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
   JSON="$(nix eval "$FLAKE#__std.ci'.$system" --json | jq -c '
@@ -26,9 +26,16 @@ function eval() {
       | from_entries'
   )"
 
-  echo "json=$JSON" >> "$GITHUB_OUTPUT"
+  nix_conf=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
 
-  echo "nix_conf=$(nix eval --raw "$FLAKE#__std.nixConfig")" >> "$GITHUB_OUTPUT"
+  delim=$RANDOM
+
+  printf "%s\n" \
+    "json=$JSON" \
+    "nix_conf<<$delim" \
+    "${nix_conf[@]}" \
+    "$delim" \
+    >> "$GITHUB_OUTPUT"
 
   echo "::debug::$JSON"
 
