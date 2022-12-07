@@ -10,8 +10,7 @@ function eval() {
   local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  list="$(nix eval "$FLAKE#__std.ci'.$system" --json)"
-  JSON="$(jq -c '
+  JSON="$(nix eval "$FLAKE#__std.ci'.$system" --json | jq -c '
       group_by(.block)
       | map({
         key: .[0].block,
@@ -24,7 +23,7 @@ function eval() {
           | from_entries
         )
       })
-      | from_entries' <<< "$list"
+      | from_entries'
   )"
 
   echo "json=$JSON" >> "$GITHUB_OUTPUT"
@@ -36,22 +35,4 @@ function eval() {
   echo "::endgroup::"
 }
 
-function archive() {
-  echo "::group::Archive Evaluation Result"
-
-  #shellcheck disable=SC2046
-  nix copy \
-    --no-check-sigs \
-    --derivation \
-    --no-auto-optimise-store \
-    --to "$DISC_PATH" \
-    $(jq -r '.[]|to_entries[]|select(.key|test("Drv$"))|select(.value|.!=null)|.value' <<< "$list")
-
-  tar -C "$DISC_PATH" --zstd -f "$DISC_ARC_PATH" -c .
-
-  echo "::endgroup::"
-}
-
 eval
-
-archive
