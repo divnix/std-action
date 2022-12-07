@@ -37,7 +37,8 @@ runs:
           discovery-${{ runner.os }}-${{ runner.arch }}-
 
 
-    - name: Install Nix
+    - if: ${{ steps.cache-nix.outputs.cache-hit != 'true' }}
+      name: Install Nix
       uses: cachix/install-nix-action@v18
       with:
         extra_nix_config: |
@@ -45,7 +46,8 @@ runs:
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}
 
-    - name: Discover
+    - if: ${{ steps.cache-nix.outputs.cache-hit != 'true' }}
+      name: Discover
       id: eval
       env:
         FLAKE: "github:${{ github.repository }}/${{ github.sha }}"
