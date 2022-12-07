@@ -25,15 +25,16 @@ runs:
 
     - name: Cache Nix Store
       id: cache-nix
-      uses: actions/cache@v3
+      uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
           /nix
-          ${{ runner.temp }}/discovery
-        key: discovery-${{ runner.os }}-${{ github.ref }}-${{ github.sha }}
+          ~/.cache/nix
+          ~root/.cache/nix
+        key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
         restore-keys: |
-          discovery-${{ runner.os }}-${{ github.ref }}
-          discovery-${{ runner.os }}
+          discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-
+          discovery-${{ runner.os }}-${{ runner.arch }}-
 
 
     - name: Install Nix

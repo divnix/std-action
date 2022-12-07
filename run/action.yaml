@@ -75,17 +75,13 @@ runs:
 
     - name: Restore Cache & Discovery Results
       id: restore-cache
-      uses: actions/cache@v3
+      uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
           /nix
-          ${{ runner.temp }}/discovery
-        restore-keys: |
-          discovery-${{ runner.os }}-${{ github.ref }}-${{ github.sha }}
-
-    - name: Import Discovery
-      run: ${{ github.action_path }}/import.sh
-      shell: bash
+          ~/.cache/nix
+          ~root/.cache/nix
+        key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
 
     - name: Install Nix
       uses: cachix/install-nix-action@v18
