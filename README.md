@@ -1,4 +1,4 @@
-# Useage
+# Usage
 
 - Works with https://github.com/divnix/std
 - **Warning:** This is still under active development and testing. You're likely better off waiting a little while, still.
