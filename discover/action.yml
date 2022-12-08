@@ -9,7 +9,7 @@ inputs:
 
 outputs:
   hits:
-    description: "List of CI actions to run."
+    description: "JSON object containing CI actions to run."
     value: ${{ steps.eval.outputs.json }}
   nix_conf:
     description: "Nix configuration of the flake."

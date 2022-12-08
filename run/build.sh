@@ -4,25 +4,16 @@ set -e
 
 DRVS=$(jq -r '.|to_entries[]|select(.key|test("Drv$"))|select(.value|.!=null)|.value' <<< "$JSON")
 declare -r DRVS
-declare -a unbuilt uncached
+declare -a uncached
 
 function calc_uncached() {
   echo "::group::Calculate Uncached Builds"
 
-   #shellcheck disable=SC2086
-   mapfile -s 1 -t uncached < <(nix-store --realise --dry-run $DRVS 2>&1 | sed '/paths will be fetched/,$ d')
+  #shellcheck disable=SC2086
+  mapfile -t uncached < <(nix-store --realise --dry-run $DRVS 2>&1 1>/dev/null | sed '/paths will be fetched/,$ d' | grep '/nix/store/.*\.drv$')
 
-  #shellcheck disable=SC2068
-  for drv in ${DRVS[@]}; do
-    # if the line grepped for doesn't show in the output, then there is nothing to build that isn't already cached
-    if nix-store --realise "$drv" --dry-run 2>&1 | grep --silent 'will be built:$'; then
-      unbuilt+=("$drv")
-    fi
-  done
+  echo "::debug::uncached paths: ${uncached[*]}"
 
-  echo "::debug::uncached paths: ${unbuilt[*]}"
-
-  echo "built=${unbuilt[*]}" >> "$GITHUB_OUTPUT"
   echo "uncached=${uncached[*]}" >> "$GITHUB_OUTPUT"
 
   echo "::endgroup::"
@@ -33,11 +24,11 @@ function calc_uncached() {
 function build() {
   echo "::group::Nix Build"
 
-  if [[ -n ${unbuilt[*]} ]]; then
+  if [[ -n ${uncached[*]} ]]; then
     #shellcheck disable=SC2086
     echo "::debug::these paths will be built: $DRVS"
 
-    nix-build --eval-store auto --store "$BUILDER" ${unbuilt[@]}
+    echo "${uncached[@]}" | xargs -- nix-build --eval-store auto --store "$BUILDER"
   else
     echo "Everything already cached, nothing to build."
   fi
