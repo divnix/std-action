@@ -6,11 +6,11 @@ shopt -s lastpipe
 function run() {
   local action drv
 
-  jq -r '.action + " " + .actionDrv' <<< "$JSON" | read -r action drv
+  jq -r '.action + " " + .targetDrv' <<< "$JSON" | read -r action drv
 
   echo "::group::Running $action"
 
-  if ! [[ $BUILT =~ $drv ]]; then
+  if [[ -n $BUILT ]]; then
     # should be fetched, since we have already checked cache status in build step
     nix-build "$drv" --no-out-link
   elif [[ $BUILDER != auto ]]; then
