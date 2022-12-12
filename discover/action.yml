@@ -22,14 +22,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set Environment
-      run: |
-        delim=$RANDOM
-
-        cat << $delim >> "$GITHUB_ENV"
-        $delim
-      shell: bash
-
     - name: Cache Nix Store
       id: cache-nix
       uses: divnix/nix-cache-action@v3.0.11-nix

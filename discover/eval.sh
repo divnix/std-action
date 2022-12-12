@@ -50,6 +50,14 @@ function cache() {
 
   drvs=$(jq -r '.[]|select(.targetDrv != null)|.targetDrv' <<< "$result")
 
+  if [[ $CACHE =~ ^s3:// && -f $NIX_KEY_PATH ]]; then
+    if [[ $CACHE =~ \? ]]; then
+      CACHE="$CACHE&secret-key=$NIX_KEY_PATH"
+    else
+      CACHE="$CACHE?secret-key=$NIX_KEY_PATH"
+    fi
+  fi
+
   if [[ -n $drvs ]]; then
     #shellcheck disable=SC2086
     nix copy --derivation --to "$CACHE" $drvs

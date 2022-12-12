@@ -2,23 +2,10 @@ name: "Sandard Action Runner"
 description: "Build a target and run its action."
 
 inputs:
-  key_path:
-    description: "The path to place the Nix secret key."
-    required: false
-    default: "${{ runner.temp }}/.nix-key"
   github_pat:
     description: "GitHub token for accessing private repos."
     required: false
     default: ${{ github.token }}
-  nix_key:
-    description: "Secret key used for Nix package signing."
-    required: false
-  s3_key:
-    description: "Key to upload to S3 Buckets with Nix."
-    required: false
-  s3_id:
-    description: "ID to upload to S3 Buckets with Nix."
-    required: false
   cache:
     description: "Nix cache to optionally upload artifacts to"
     # auto refers to the local nix store, so nothing is uploaded by default
@@ -31,14 +18,6 @@ inputs:
   json:
     description: "JSON describing the action, found in the discovery phase."
     required: true
-  nix_ssh_key:
-    description: "SSH private key to send builds to a remote Nix builder."
-    default: none
-    required: false
-  ssh_known_hosts:
-    description: "SSH known host keys for Nix builders"
-    default: none
-    required: false
   extra_nix_config:
     description: "Configuration to append to the nix.conf."
     required: false
@@ -53,8 +32,6 @@ runs:
         cat << $delim >> "$GITHUB_ENV"
         DISC_PATH=${{ runner.temp }}/discovery
         DISC_ARC_PATH=${{ runner.temp }}/discovery.tar.zstd
-        SSH_AUTH_SOCK=${{ runner.temp }}/ssh_agent.sock
-        NIX_KEY_PATH=${{ inputs.key_path }}
         BUILDER=${{ inputs.builder }}
         CACHE=${{ inputs.cache }}
         $delim
@@ -63,15 +40,6 @@ runs:
         echo '${{ inputs.json }}' >> $GITHUB_ENV
         echo "$delim" >> $GITHUB_ENV
       shell: bash
-
-    - name: Emplace Secrets
-      if: inputs.nix_key != '' || inputs.s3_id != '' || inputs.s3_key != ''
-      run: ${{ github.action_path }}/secrets.sh
-      shell: bash
-      env:
-        NIX_SECRET_KEY: ${{ inputs.nix_key }}
-        AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
 
     - name: Restore Cache & Discovery Results
       id: restore-cache
@@ -93,20 +61,6 @@ runs:
           secret-key-files = ${{ env.NIX_KEY_PATH }}
           ${{ inputs.extra_nix_config }}
 
-    - name: Setup SSH Keys
-      if: inputs.nix_ssh_key != 'none' && inputs.builder != 'auto'
-      run: |
-        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
-        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
-      shell: bash
-
-    - name: Setup SSH Known Hosts
-      if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none' && inputs.builder != 'auto'
-      run: |
-        sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
-        sudo chmod 0644 /etc/ssh/ssh_known_hosts
-      shell: bash
-
     - name: Build ${{ fromJSON(env.JSON).name }}
       id: build
       run: |
@@ -124,7 +78,7 @@ runs:
     - name: Populate Cache
       env:
         UNCACHED: ${{ steps.build.outputs.uncached }}
-      if: always() && env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
+      if: always() && env.CACHE != 'auto' env.NIX_KEY_PATH != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
         ${{ github.action_path }}/cache.sh
       shell: bash
