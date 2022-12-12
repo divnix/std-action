@@ -18,6 +18,9 @@ outputs:
   nix_conf:
     description: "Nix configuration of the flake."
     value: ${{ steps.eval.outputs.nix_conf }}
+  cached:
+    description: "Boolean marking whether results are cached in inputs.cache."
+    value: ${{ steps.eval.outputs.cached }}
 
 runs:
   using: "composite"

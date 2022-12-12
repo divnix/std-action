@@ -61,6 +61,8 @@ function cache() {
   if [[ -n $drvs ]]; then
     #shellcheck disable=SC2086
     nix copy --derivation --to "$CACHE" $drvs
+
+    echo "cached=true" >> "$GITHUB_OUTPUT"
   fi
 
   echo "::endgroup::"

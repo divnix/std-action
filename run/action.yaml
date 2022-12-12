@@ -18,6 +18,9 @@ inputs:
   json:
     description: "JSON describing the action, found in the discovery phase."
     required: true
+  cached:
+    description: "Boolean marking whether to pull discovery artifacts from the Nix cache."
+    required: false
   extra_nix_config:
     description: "Configuration to append to the nix.conf."
     required: false
@@ -42,6 +45,7 @@ runs:
       shell: bash
 
     - name: Restore Cache & Discovery Results
+      if: inputs.cached != 'true' || inputs.cache == 'auto'
       id: restore-cache
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
@@ -61,6 +65,11 @@ runs:
           secret-key-files = ${{ env.NIX_KEY_PATH }}
           ${{ inputs.extra_nix_config }}
 
+    - name: Pull Target from Nix Cache
+      if: inputs.cached == 'true' && inputs.cache != 'auto'
+      run: nix copy --derivation --from ${{ inputs.cache }} ${{ fromJSON(env.JSON).targetDrv }}
+      shell: bash
+
     - name: Build ${{ fromJSON(env.JSON).name }}
       id: build
       run: |
@@ -78,7 +87,7 @@ runs:
     - name: Populate Cache
       env:
         UNCACHED: ${{ steps.build.outputs.uncached }}
-      if: always() && env.CACHE != 'auto' env.NIX_KEY_PATH != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
+      if: always() && env.CACHE != 'auto' && env.NIX_KEY_PATH != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
         ${{ github.action_path }}/cache.sh
       shell: bash
