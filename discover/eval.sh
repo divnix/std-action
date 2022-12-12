@@ -2,7 +2,7 @@
 
 set -e
 
-declare JSON
+declare JSON result
 
 function eval() {
   echo "::group::Nix Evaluation"
@@ -10,7 +10,8 @@ function eval() {
   local system delim
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  JSON="$(nix eval "$FLAKE#__std.ci'.$system" --json | jq -c '
+  result=$(nix eval "$FLAKE#__std.ci'.$system" --json)
+  JSON="$(jq -c '
       group_by(.block)
       | map({
         key: .[0].block,
@@ -23,7 +24,7 @@ function eval() {
           | from_entries
         )
       })
-      | from_entries'
+      | from_entries' <<< "$result"
   )"
 
   nix_conf=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
@@ -42,4 +43,23 @@ function eval() {
   echo "::endgroup::"
 }
 
+function cache() {
+  echo "::group::Cache Evaluation"
+
+  local drvs
+
+  drvs=$(jq -r '.[]|select(.targetDrv != null)|.targetDrv' <<< "$result")
+
+  if [[ -n $drvs ]]; then
+    #shellcheck disable=SC2086
+    nix copy --derivation --to "$CACHE" $drvs
+  fi
+
+  echo "::endgroup::"
+}
+
 eval
+
+if [[ $CACHE != 'auto' ]]; then
+  cache
+fi

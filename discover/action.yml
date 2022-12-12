@@ -2,6 +2,10 @@ name: "Standard Discovery"
 description: "Find out what to build & run in a Standard project."
 
 inputs:
+  cache:
+    description: "Nix cache to upload evaluation results to."
+    required: false
+    default: auto
   github_pat:
     description: "GitHub token for accessing private repos."
     required: false
@@ -52,6 +56,7 @@ runs:
       id: eval
       env:
         FLAKE: "github:${{ github.repository }}/${{ github.sha }}"
+        CACHE: ${{ inputs.cache }}
       run: |
         ${{ github.action_path }}/eval.sh
       shell: bash
