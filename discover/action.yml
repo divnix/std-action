@@ -28,6 +28,7 @@ runs:
 
     - name: Cache Nix Store
       id: cache-nix
+      if: startsWith(runner.name, 'discovery') == false
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
@@ -42,6 +43,7 @@ runs:
 
     - name: Install Nix
       uses: cachix/install-nix-action@v18
+      if: startsWith(runner.name, 'discovery') == false
       with:
         extra_nix_config: |
           accept-flake-config = true
