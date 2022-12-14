@@ -42,6 +42,10 @@ inputs:
   extra_nix_config:
     description: "Configuration to append to the nix.conf."
     required: false
+  discovery_ssh:
+    description: "Nix store URI for a dedicated discovery machine."
+    default: none
+    required: false
 
 runs:
   using: "composite"
@@ -73,8 +77,23 @@ runs:
         AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
 
+    - name: Setup SSH Keys
+      if: inputs.nix_ssh_key != 'none'
+      run: |
+        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
+      shell: bash
+
+    - name: Setup SSH Known Hosts
+      if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none'
+      run: |
+        sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
+        sudo chmod 0644 /etc/ssh/ssh_known_hosts
+      shell: bash
+
     - name: Restore Cache & Discovery Results
       id: restore-cache
+      if: inputs.discovery_ssh == 'none'
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
@@ -93,18 +112,16 @@ runs:
           secret-key-files = ${{ env.NIX_KEY_PATH }}
           ${{ inputs.extra_nix_config }}
 
-    - name: Setup SSH Keys
-      if: inputs.nix_ssh_key != 'none' && inputs.builder != 'auto'
+    - name: Pull Derivations from Discovery Runner
+      if: inputs.discovery_ssh != 'none'
       run: |
-        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
-        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
-      shell: bash
-
-    - name: Setup SSH Known Hosts
-      if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none' && inputs.builder != 'auto'
-      run: |
-        sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
-        sudo chmod 0644 /etc/ssh/ssh_known_hosts
+        ssh ${{ inputs.discovery_ssh }} -- \
+          'nix-store --export \
+            $(nix-store --query --requisites \
+              ${{ fromJSON(env.JSON).targetDrv }} ${{ fromJSON(env.JSON).actionDrv }}) \
+          | zstd' \
+        | unzstd \
+        | nix-store --import &>/dev/null
       shell: bash
 
     - name: Build ${{ fromJSON(env.JSON).name }}
