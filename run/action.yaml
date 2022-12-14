@@ -75,7 +75,7 @@ runs:
 
     - name: Restore Cache & Discovery Results
       id: restore-cache
-      uses: divnix/nix-cache-action@v3.0.11-nix
+      uses: divnix/nix-cache-action@b14ec98ae694c754f57f8619ea21b6ab44ccf6e7
       with:
         path: |
           /nix

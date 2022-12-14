@@ -28,7 +28,7 @@ runs:
 
     - name: Cache Nix Store
       id: cache-nix
-      uses: divnix/nix-cache-action@v3.0.11-nix
+      uses: divnix/nix-cache-action@dfc0a600f2a543ee5afdfe7d44c9eda3536d14b2
       with:
         path: |
           /nix
