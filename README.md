@@ -1,7 +1,9 @@
 # Usage
 
 - Works with https://github.com/divnix/std
+- Since GitHub CI doesn't support yaml anchors, explode your file with: `yq '. | explode(.)' ci.raw.yaml > ci.yaml`
 - **Warning:** This is still under active development and testing. You're likely better off waiting a little while, still.
+  - But it's already being used with success :smile:
  
 
 ```yaml
