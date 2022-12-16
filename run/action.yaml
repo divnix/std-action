@@ -58,9 +58,9 @@ runs:
         DISC_PATH=${{ runner.temp }}/discovery
         DISC_ARC_PATH=${{ runner.temp }}/discovery.tar.zstd
         SSH_AUTH_SOCK=${{ runner.temp }}/ssh_agent.sock
-        NIX_KEY_PATH=${{ inputs.key_path }}
         BUILDER=${{ inputs.builder }}
         CACHE=${{ inputs.cache }}
+        NIX_KEY_PATH=
         $delim
 
         echo "JSON<<$delim" >> $GITHUB_ENV
@@ -73,6 +73,7 @@ runs:
       run: ${{ github.action_path }}/secrets.sh
       shell: bash
       env:
+        NIX_KEY_PATH: ${{inputs.key_path}}
         NIX_SECRET_KEY: ${{ inputs.nix_key }}
         AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
