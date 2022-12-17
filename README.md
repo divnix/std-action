@@ -2,6 +2,7 @@
 
 - Works with https://github.com/divnix/std
 - Since GitHub CI doesn't support yaml anchors, explode your file with: `yq '. | explode(.)' ci.raw.yaml > ci.yaml`
+- To set up AWS Credentials for an S3 Cache, find details [here](https://github.com/aws-actions/configure-aws-credentials)
 - **Warning:** This is still under active development and testing. You're likely better off waiting a little while, still.
   - But it's already being used with success :smile:
  
@@ -45,6 +46,11 @@ jobs:
     name: ${{ matrix.target.cell }} - ${{ matrix.target.name }}
     runs-on: ubuntu-latest
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: arn:aws:iam::123456789100:role/my-github-actions-role
+          aws-region: us-east-2
       - uses: divnix/std-action/run@main
         with:
           extra_nix_config: |
@@ -53,8 +59,6 @@ jobs:
           # optional:
           github_pat: ${{ secrets.HUB_PAT }}
           nix_key: ${{ secrets.NIX_SECRET_KEY }}
-          s3_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          s3_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           nix_ssh_key: ${{ secrets.NIXBUILD_SSH }}
           cache: s3://nix?endpoint=sfo3.digitaloceanspaces.com
           builder: ssh-ng://eu.nixbuild.net

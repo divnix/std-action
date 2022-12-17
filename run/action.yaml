@@ -13,12 +13,6 @@ inputs:
   nix_key:
     description: "Secret key used for Nix package signing."
     required: false
-  s3_key:
-    description: "Key to upload to S3 Buckets with Nix."
-    required: false
-  s3_id:
-    description: "ID to upload to S3 Buckets with Nix."
-    required: false
   cache:
     description: "Nix cache to optionally upload artifacts to"
     # auto refers to the local nix store, so nothing is uploaded by default
@@ -52,14 +46,17 @@ runs:
   steps:
 
     - name: Emplace Secrets
-      if: inputs.nix_key != '' || inputs.s3_id != '' || inputs.s3_key != ''
-      run: ${{ github.action_path }}/secrets.sh
+      if: inputs.nix_key != ''
       shell: bash
       env:
         NIX_KEY_PATH: ${{ inputs.key_path }}
         NIX_SECRET_KEY: ${{ inputs.nix_key }}
-        AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
+      run: |
+        echo "::group::Make Nix secret key."
+        echo "$NIX_SECRET_KEY" >"$NIX_KEY_PATH"
+        chmod 0600 "$NIX_KEY_PATH"
+        echo "::endgroup::"
+
 
     - name: Setup SSH Keys
       if: inputs.nix_ssh_key != 'none'
@@ -92,8 +89,9 @@ runs:
         key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
 
     - name: Install Nix
-      uses: cachix/install-nix-action@v18
+      uses: cachix/install-nix-action@pull/150/head
       with:
+        install_options: --no-daemon
         extra_nix_config: |
           accept-flake-config = true
           trusted-users = runner

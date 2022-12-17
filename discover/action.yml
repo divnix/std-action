@@ -34,9 +34,10 @@ runs:
 
 
     - name: Install Nix
-      uses: cachix/install-nix-action@v18
+      uses: cachix/install-nix-action@pull/150/head
       if: startsWith(runner.name, 'discovery') == false
       with:
+        install_options: --no-daemon
         extra_nix_config: |
           accept-flake-config = true
           trusted-users = runner
