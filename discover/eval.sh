@@ -10,7 +10,8 @@ function eval() {
   local system delim
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  JSON="$(nix eval "$FLAKE#__std.ci'.$system" --json | jq -c '
+  list="$(nix eval "$FLAKE#__std.ci'.$system" --json)"
+  JSON="$(jq -c '
       group_by(.block)
       | map({
         key: .[0].block,
@@ -23,7 +24,7 @@ function eval() {
           | from_entries
         )
       })
-      | from_entries'
+      | from_entries' <<< "$list"
   )"
 
   nix_conf=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
