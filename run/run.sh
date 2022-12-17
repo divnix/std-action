@@ -14,6 +14,10 @@ function run() {
 
   jq -r '.action + " " + .name + " " + .actionDrv + " " + .targetDrv' <<< "$JSON" | read -r action name drv target
 
+  if [[ -z $target ]]; then
+    target=$drv
+  fi
+
   echo "::group::$action $name"
 
   if [[ -z $BUILT ]]; then
