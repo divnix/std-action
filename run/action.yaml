@@ -50,45 +50,33 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Set Environment
-      run: |
-        delim=$RANDOM
-
-        cat << $delim >> "$GITHUB_ENV"
-        DISC_PATH=${{ runner.temp }}/discovery
-        DISC_ARC_PATH=${{ runner.temp }}/discovery.tar.zstd
-        SSH_AUTH_SOCK=${{ runner.temp }}/ssh_agent.sock
-        BUILDER=${{ inputs.builder }}
-        CACHE=${{ inputs.cache }}
-        NIX_KEY_PATH=
-        $delim
-
-        echo "JSON<<$delim" >> $GITHUB_ENV
-        echo '${{ inputs.json }}' >> $GITHUB_ENV
-        echo "$delim" >> $GITHUB_ENV
-      shell: bash
 
     - name: Emplace Secrets
       if: inputs.nix_key != '' || inputs.s3_id != '' || inputs.s3_key != ''
       run: ${{ github.action_path }}/secrets.sh
       shell: bash
       env:
-        NIX_KEY_PATH: ${{inputs.key_path}}
+        NIX_KEY_PATH: ${{ inputs.key_path }}
         NIX_SECRET_KEY: ${{ inputs.nix_key }}
         AWS_ACCESS_KEY_ID: ${{ inputs.s3_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.s3_key }}
 
     - name: Setup SSH Keys
       if: inputs.nix_ssh_key != 'none'
+      env:
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        NIX_SSH_KEY: ${{ inputs.nix_ssh_key }}
       run: |
         ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
-        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
+        ssh-add - <<< "$NIX_SSH_KEY"
       shell: bash
 
     - name: Setup SSH Known Hosts
       if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none'
+      env:
+        SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
       run: |
-        sudo sh -c 'echo "${{ inputs.ssh_known_hosts }}" >> /etc/ssh/ssh_known_hosts'
+        sudo sh -c 'echo "$SSH_KNOWN_HOSTS" >> /etc/ssh/ssh_known_hosts'
         sudo chmod 0644 /etc/ssh/ssh_known_hosts
       shell: bash
 
@@ -115,33 +103,49 @@ runs:
 
     - name: Pull Derivations from Discovery Runner
       if: inputs.discovery_ssh != 'none'
+      env:
+        DISCOVERY_SSH: ${{ inputs.discovery_ssh }}
       run: |
-        ssh ${{ inputs.discovery_ssh }} -- \
+        ssh "$DISCOVERY_SSH" -- \
           'nix-store --export \
             $(nix-store --query --requisites \
-              ${{ fromJSON(env.JSON).targetDrv }} ${{ fromJSON(env.JSON).actionDrv }}) \
+              ${{ fromJSON(inputs.json).targetDrv }} ${{ fromJSON(inputs.json).actionDrv }}) \
           | zstd' \
         | unzstd \
         | nix-store --import &>/dev/null
       shell: bash
 
-    - name: Build ${{ fromJSON(env.JSON).name }}
+    - name: Build ${{ fromJSON(inputs.json).name }}
       id: build
+      env:
+        BUILDER: ${{ inputs.builder }}
       run: |
+        delim=$RANDOM
+        echo "JSON<<$delim" >> $GITHUB_ENV
+        echo '${{ inputs.json }}' >> $GITHUB_ENV
+        echo "$delim" >> $GITHUB_ENV
         ${{ github.action_path }}/build.sh
       shell: bash
 
-    - name: ${{ fromJSON(env.JSON).action }} ${{ fromJSON(env.JSON).name }}
-      if: fromJSON(env.JSON).action != 'build'
+    - name: ${{ fromJSON(inputs.json).action }} ${{ fromJSON(inputs.json).name }}
+      if: fromJSON(inputs.json).action != 'build'
       env:
         BUILT: ${{ steps.build.outputs.uncached }}
+        BUILDER: ${{ inputs.builder }}
       run: |
+        delim=$RANDOM
+        echo "JSON<<$delim" >> $GITHUB_ENV
+        echo '${{ inputs.json }}' >> $GITHUB_ENV
+        echo "$delim" >> $GITHUB_ENV
         ${{ github.action_path }}/run.sh
       shell: bash
 
     - name: Populate Cache
       env:
+        CACHE: ${{ inputs.cache }}
+        BUILDER: ${{ inputs.builder }}
         UNCACHED: ${{ steps.build.outputs.uncached }}
+        NIX_KEY_PATH: ${{ inputs.key_path }}
       if: always() && env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
         ${{ github.action_path }}/cache.sh
