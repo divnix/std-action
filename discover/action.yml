@@ -34,11 +34,11 @@ runs:
 
 
     - name: Install Nix
-      uses: cachix/install-nix-action@pull/150/head
+      uses: nixbuild/nix-quick-install-action@v19
       if: startsWith(runner.name, 'discovery') == false
       with:
-        install_options: --no-daemon
-        extra_nix_config: |
+        nix_conf: |
+          experimental-features = nix-command flakes
           accept-flake-config = true
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}

@@ -2,10 +2,7 @@
 
 set -e
 
-target=$(jq -r '.targetDrv' <<< "$JSON")
-if [[ $target == 'null' ]]; then
-  target=$(jq -er '.actionDrv' <<< "$JSON")
-fi
+target=$(jq -er '.actionDrv' <<< "$JSON")
 declare -r target
 declare -a uncached
 
