@@ -45,7 +45,7 @@ runs:
   using: "composite"
   steps:
 
-    - name: Emplace Secrets
+    - name: Emplace Secret Key
       if: inputs.nix_key != ''
       shell: bash
       env:
@@ -89,10 +89,10 @@ runs:
         key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
 
     - name: Install Nix
-      uses: cachix/install-nix-action@pull/150/head
+      uses: nixbuild/nix-quick-install-action@v19
       with:
-        install_options: --no-daemon
-        extra_nix_config: |
+        nix_conf: |
+          experimental-features = nix-command flakes
           accept-flake-config = true
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}
