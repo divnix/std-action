@@ -105,7 +105,7 @@ runs:
         ssh "$DISCOVERY_SSH" -- \
           'nix-store --export \
             $(nix-store --query --requisites \
-              ${{ fromJSON(inputs.json).targetDrv }} ${{ fromJSON(inputs.json).actionDrv }}) \
+              ${{ fromJSON(inputs.json).actionDrv }}) \
           | zstd' \
         | unzstd \
         | nix-store --import &>/dev/null
