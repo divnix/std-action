@@ -45,15 +45,14 @@ runs:
   using: "composite"
   steps:
 
-    - name: Emplace Secret Key
+    - name: Emplace Nix Key
       if: inputs.nix_key != ''
       shell: bash
       env:
         NIX_KEY_PATH: ${{ inputs.key_path }}
-        NIX_SECRET_KEY: ${{ inputs.nix_key }}
       run: |
         echo "::group::Make Nix secret key."
-        echo "$NIX_SECRET_KEY" >"$NIX_KEY_PATH"
+        echo "${{ inputs.nix_key }}" >"$NIX_KEY_PATH"
         chmod 0600 "$NIX_KEY_PATH"
         echo "::endgroup::"
 
@@ -62,19 +61,17 @@ runs:
       if: inputs.nix_ssh_key != 'none'
       env:
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-        NIX_SSH_KEY: ${{ inputs.nix_ssh_key }}
       run: |
         ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
-        ssh-add - <<< "$NIX_SSH_KEY"
+        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
       shell: bash
 
     - name: Setup SSH Known Hosts
       if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none'
-      env:
-        SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
       run: |
-        sudo sh -c 'echo "$SSH_KNOWN_HOSTS" >> /etc/ssh/ssh_known_hosts'
-        sudo chmod 0644 /etc/ssh/ssh_known_hosts
+        mkdir ~/.ssh
+        echo "${{ inputs.ssh_known_hosts }}" >> ~/.ssh/known_hosts
+        sudo chmod 0600 ~/.ssh/known_hosts
       shell: bash
 
     - name: Restore Cache & Discovery Results
@@ -103,6 +100,7 @@ runs:
       if: inputs.discovery_ssh != 'none'
       env:
         DISCOVERY_SSH: ${{ inputs.discovery_ssh }}
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       run: |
         ssh "$DISCOVERY_SSH" -- \
           'nix-store --export \
@@ -117,6 +115,7 @@ runs:
       id: build
       env:
         BUILDER: ${{ inputs.builder }}
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       run: |
         delim=$RANDOM
         echo "JSON<<$delim" >> $GITHUB_ENV
@@ -130,6 +129,7 @@ runs:
       env:
         BUILT: ${{ steps.build.outputs.uncached }}
         BUILDER: ${{ inputs.builder }}
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       run: |
         delim=$RANDOM
         echo "JSON<<$delim" >> $GITHUB_ENV
@@ -144,6 +144,7 @@ runs:
         BUILDER: ${{ inputs.builder }}
         UNCACHED: ${{ steps.build.outputs.uncached }}
         NIX_KEY_PATH: ${{ inputs.key_path }}
+        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       if: always() && env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
         ${{ github.action_path }}/cache.sh
