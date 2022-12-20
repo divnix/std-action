@@ -10,21 +10,17 @@ function check_exec() {
 }
 
 function run() {
-  local action drv name target
+  local action drv name
 
-  jq -r '.action + " " + .name + " " + .actionDrv + " " + .targetDrv' <<< "$JSON" | read -r action name drv target
-
-  if [[ -z $target ]]; then
-    target=$drv
-  fi
+  jq -r '.action + " " + .name + " " + .actionDrv' <<< "$JSON" | read -r action name drv
 
   echo "::group::$action $name"
 
   if [[ -z $BUILT ]]; then
     # should be fetched, since we have already checked cache status in build step
-    nix-build "$target" "$drv" --no-out-link
+    nix-build "$drv" --no-out-link
   elif [[ $BUILDER != auto ]]; then
-    nix copy --from "$BUILDER" "$target"
+    nix copy --from "$BUILDER" "$drv"
   fi
 
   out="$(nix show-derivation "$drv" | jq -r '.[].outputs.out.path')"
