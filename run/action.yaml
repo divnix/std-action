@@ -93,7 +93,7 @@ runs:
           accept-flake-config = true
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}
-          secret-key-files = ${{ env.NIX_KEY_PATH }}
+          secret-key-files = ${{ inputs.key_path }}
           ${{ inputs.extra_nix_config }}
 
     - name: Pull Derivations from Discovery Runner
