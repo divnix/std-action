@@ -116,11 +116,8 @@ runs:
       env:
         BUILDER: ${{ inputs.builder }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        JSON: ${{ inputs.json }}
       run: |
-        delim=$RANDOM
-        echo "JSON<<$delim" >> $GITHUB_ENV
-        echo '${{ inputs.json }}' >> $GITHUB_ENV
-        echo "$delim" >> $GITHUB_ENV
         ${{ github.action_path }}/build.sh
       shell: bash
 
@@ -130,11 +127,8 @@ runs:
         BUILT: ${{ steps.build.outputs.uncached }}
         BUILDER: ${{ inputs.builder }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        JSON: ${{ inputs.json }}
       run: |
-        delim=$RANDOM
-        echo "JSON<<$delim" >> $GITHUB_ENV
-        echo '${{ inputs.json }}' >> $GITHUB_ENV
-        echo "$delim" >> $GITHUB_ENV
         ${{ github.action_path }}/run.sh
       shell: bash
 
