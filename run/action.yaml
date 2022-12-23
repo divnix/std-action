@@ -137,7 +137,7 @@ runs:
         UNCACHED: ${{ steps.build.outputs.uncached }}
         NIX_KEY_PATH: ${{runner.temp }}/.nix-key
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-      if: always() && env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
+      if: always() && env.CACHE != 'auto' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
         ${{ github.action_path }}/cache.sh
       shell: bash
