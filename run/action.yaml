@@ -128,6 +128,8 @@ runs:
         BUILDER: ${{ inputs.builder }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
         JSON: ${{ inputs.json }}
+        PRJ_ROOT: ${{ github.workspace }}
+        PRJ_DATA_DIR: ${{ github.workspace }}/.std
       run: |
         ${{ github.action_path }}/run.sh
       shell: bash
