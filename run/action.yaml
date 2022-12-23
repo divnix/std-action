@@ -82,7 +82,7 @@ runs:
         key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
 
     - name: Install Nix
-      uses: nixbuild/nix-quick-install-action@v19
+      uses: nixbuild/nix-quick-install-action@support-existing-nix-dir
       with:
         nix_conf: |
           experimental-features = nix-command flakes

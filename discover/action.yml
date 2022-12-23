@@ -34,7 +34,7 @@ runs:
 
 
     - name: Install Nix
-      uses: nixbuild/nix-quick-install-action@v19
+      uses: nixbuild/nix-quick-install-action@support-existing-nix-dir
       if: startsWith(runner.name, 'discovery') == false
       with:
         nix_conf: |
