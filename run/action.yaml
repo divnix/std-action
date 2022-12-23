@@ -2,10 +2,6 @@ name: "Sandard Action Runner"
 description: "Build a target and run its action."
 
 inputs:
-  key_path:
-    description: "The path to place the Nix secret key."
-    required: false
-    default: "${{ runner.temp }}/.nix-key"
   github_pat:
     description: "GitHub token for accessing private repos."
     required: false
@@ -49,7 +45,7 @@ runs:
       if: inputs.nix_key != ''
       shell: bash
       env:
-        NIX_KEY_PATH: ${{ inputs.key_path }}
+        NIX_KEY_PATH: ${{ runner.temp }}/.nix-key
       run: |
         echo "::group::Make Nix secret key."
         echo "${{ inputs.nix_key }}" >"$NIX_KEY_PATH"
@@ -93,7 +89,7 @@ runs:
           accept-flake-config = true
           trusted-users = runner
           access-tokens = github.com=${{ inputs.github_pat }}
-          secret-key-files = ${{ inputs.key_path }}
+          ${{ inputs.nix_key != '' && format('secret-key-files = {0}', '${{runner.temp }}/.nix-key' ) || '' }}
           ${{ inputs.extra_nix_config }}
 
     - name: Pull Derivations from Discovery Runner
@@ -139,7 +135,7 @@ runs:
         CACHE: ${{ inputs.cache }}
         BUILDER: ${{ inputs.builder }}
         UNCACHED: ${{ steps.build.outputs.uncached }}
-        NIX_KEY_PATH: ${{ inputs.key_path }}
+        NIX_KEY_PATH: ${{runner.temp }}/.nix-key
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       if: always() && env.CACHE != 'auto' && inputs.nix_key != '' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
