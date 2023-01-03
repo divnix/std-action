@@ -2,7 +2,7 @@
 
 set -e
 
-declare -a LIST
+declare -a LIST NIX_CONFIG
 declare PROVISIONED
 
 function eval() {
@@ -21,6 +21,9 @@ function provision() {
 
   PROVISIONED='[]'
 
+  NIX_CONFIG=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
+  export NIX_CONFIG
+
   for action in "${LIST[@]}"; do
     proviso="$(jq -r '.proviso' <<< "$action")"
     if [[ $proviso == null ]] || (builtin eval "$proviso"); then
@@ -37,7 +40,7 @@ function provision() {
 function output() {
   echo "::group::Set Outputs"
 
-  local json delim nix_conf
+  local json delim
 
   json="$(jq -c '
       group_by(.block)
@@ -55,14 +58,12 @@ function output() {
       | from_entries' <<< "$PROVISIONED"
   )"
 
-  nix_conf=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
-
   delim=$RANDOM
 
   printf "%s\n" \
     "json=$json" \
     "nix_conf<<$delim" \
-    "${nix_conf[@]}" \
+    "${NIX_CONFIG[@]}" \
     "$delim" \
     >> "$GITHUB_OUTPUT"
 
