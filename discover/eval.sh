@@ -2,8 +2,8 @@
 
 set -e
 
-declare -a LIST NIX_CONFIG
-declare PROVISIONED
+declare -a LIST
+declare PROVISIONED NIX_CONFIG
 
 function eval() {
   echo "::group::Nix Evaluation"
@@ -19,18 +19,25 @@ function eval() {
 function provision() {
   echo "::group::Provison Jobs"
 
+  local by_action proviso
+  local -a action_list
+
+  by_action=$(jq -sc 'group_by(.action)|map({key: .[0].action, value: .})| from_entries' <<< "${LIST[@]}")
+
   PROVISIONED='[]'
 
   NIX_CONFIG=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
   export NIX_CONFIG
 
-  for action in "${LIST[@]}"; do
-    proviso="$(jq -r '.proviso' <<< "$action")"
-    if [[ $proviso == null ]] || (builtin eval "$proviso"); then
-      if [[ $proviso != null ]]; then
-        action=$(jq -c 'del(.proviso)' <<< "$action")
-      fi
-      PROVISIONED=$(jq ". += [$action]" <<< "$PROVISIONED")
+  for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
+    mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")
+    proviso=$(jq -sr '.[0].proviso' <<< "${action_list[@]}")
+    if [[ $proviso != 'null' ]]; then
+      # shellcheck disable=SC1090
+      . "$proviso"
+      proviso action_list PROVISIONED
+    else
+      PROVISIONED=$(jq -cs '. += $p' --argjson p "$PROVISIONED" <<< "${action_list[@]}")
     fi
   done
 
