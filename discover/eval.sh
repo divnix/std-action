@@ -2,16 +2,54 @@
 
 set -e
 
-declare JSON
+declare -a LIST
+declare PROVISIONED NIX_CONFIG
 
 function eval() {
   echo "::group::Nix Evaluation"
 
-  local system delim
+  local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  list="$(nix eval "$FLAKE#__std.ci'.$system" --json)"
-  JSON="$(jq -c '
+  mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --json | jq -c 'unique_by(.actionDrv)|.[]')
+
+  echo "::endgroup::"
+}
+
+function provision() {
+  echo "::group::Provison Jobs"
+
+  local by_action proviso
+  local -a action_list
+
+  by_action=$(jq -sc 'group_by(.action)|map({key: .[0].action, value: .})| from_entries' <<< "${LIST[@]}")
+
+  PROVISIONED='[]'
+
+  NIX_CONFIG=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
+  export NIX_CONFIG
+
+  for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
+    mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")
+    proviso=$(jq -sr '.[0].proviso' <<< "${action_list[@]}")
+    if [[ $proviso != 'null' ]]; then
+      # shellcheck disable=SC1090
+      . "$proviso"
+      proviso action_list PROVISIONED
+    else
+      PROVISIONED=$(jq -cs '. += $p' --argjson p "$PROVISIONED" <<< "${action_list[@]}")
+    fi
+  done
+
+  echo "::endgroup::"
+}
+
+function output() {
+  echo "::group::Set Outputs"
+
+  local json delim
+
+  json="$(jq -c '
       group_by(.block)
       | map({
         key: .[0].block,
@@ -24,23 +62,26 @@ function eval() {
           | from_entries
         )
       })
-      | from_entries' <<< "$list"
+      | from_entries' <<< "$PROVISIONED"
   )"
-
-  nix_conf=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
 
   delim=$RANDOM
 
   printf "%s\n" \
-    "json=$JSON" \
+    "json=$json" \
     "nix_conf<<$delim" \
-    "${nix_conf[@]}" \
+    "${NIX_CONFIG[@]}" \
     "$delim" \
     >> "$GITHUB_OUTPUT"
 
-  echo "::debug::$JSON"
+  echo "::debug::$json"
 
   echo "::endgroup::"
 }
 
+
 eval
+
+provision
+
+output
