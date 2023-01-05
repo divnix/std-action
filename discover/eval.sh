@@ -25,13 +25,16 @@ function provision() {
 
   local by_action proviso
   local -a action_list
+  local nix_conf
 
   by_action=$(jq -sc 'group_by(.action)|map({key: .[0].action, value: .})| from_entries' <<< "${LIST[@]}")
 
   PROVISIONED='[]'
 
-  NIX_CONFIG=("$(nix eval --raw "$FLAKE#__std.nixConfig")")
-  export NIX_CONFIG
+  nix_conf="$(mktemp -d)/nix.conf"
+  NIX_CONFIG=$(nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
+  NIX_USER_CONF_FILES="$nix_conf:$NIX_USER_CONF_FILES"
+  export NIX_USER_CONF_FILES
 
   for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
     mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")

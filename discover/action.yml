@@ -46,6 +46,7 @@ runs:
     - name: Discover
       id: eval
       env:
+        TMPDIR: ${{ runner.temp }}
         FLAKE: "github:${{ github.repository }}/${{ github.sha }}"
       run: |
         ${{ github.action_path }}/eval.sh
