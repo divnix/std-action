@@ -11,7 +11,11 @@ function eval() {
   local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --json | jq -c 'unique_by(.actionDrv)|.[]')
+  mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --show-trace --json | jq -c 'unique_by(.actionDrv)|.[]')
+
+  if [[ -z ${LIST[*]} ]]; then
+    exit 1
+  fi
 
   echo "::endgroup::"
 }
