@@ -33,7 +33,7 @@ function provision() {
 
   nix_conf="$(mktemp -d)/nix.conf"
   NIX_CONFIG=$(nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
-  NIX_USER_CONF_FILES="$nix_conf:$NIX_USER_CONF_FILES"
+  NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
   export NIX_USER_CONF_FILES
 
   for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
