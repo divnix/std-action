@@ -3,7 +3,7 @@
 set -e
 
 declare -a LIST
-declare PROVISIONED NIX_CONFIG
+declare PROVISIONED
 
 function eval() {
   echo "::group::Nix Evaluation"
@@ -30,12 +30,20 @@ function provision() {
   by_action=$(jq -sc 'group_by(.action)|map({key: .[0].action, value: .})| from_entries' <<< "${LIST[@]}")
 
   PROVISIONED='[]'
+  
+  echo before
+  echo "$NIX_USER_CONF_FILES"
+  nix show-config
 
   nix_conf="$(mktemp -d)/nix.conf"
   NIX_CONFIG=$(nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
   NIX_USER_CONF_FILES="$nix_conf:$NIX_USER_CONF_FILES"
   export NIX_USER_CONF_FILES
-
+  
+  echo after
+  echo "$NIX_USER_CONF_FILES"
+  nix show-config
+  
   for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
     mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")
     proviso=$(jq -sr '.[0].proviso' <<< "${action_list[@]}")
