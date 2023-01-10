@@ -76,7 +76,7 @@ runs:
 
     - name: Restore Cache & Discovery Results
       id: restore-cache
-      if: inputs.discovery_ssh == 'none'
+      if: inputs.discovery_ssh == 'none' && runner.os != 'macOS'
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
@@ -95,6 +95,17 @@ runs:
           access-tokens = github.com=${{ inputs.github_pat }}
           secret-key-files = ${{ env.NIX_KEY_PATH }}
           ${{ inputs.extra_nix_config }}
+
+    - name: Restore Cache & Discovery Results
+      id: restore-cache-mac
+      if: inputs.discovery_ssh == 'none' && runner.os == 'macOS'
+      uses: divnix/nix-cache-action@v3.0.11-nix
+      with:
+        path: |
+          /nix
+          ~/.cache/nix
+          ~root/.cache/nix
+        key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
 
     - name: Pull Derivations from Discovery Runner
       if: inputs.discovery_ssh != 'none'
@@ -117,8 +128,14 @@ runs:
         BUILDER: ${{ inputs.builder }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
         JSON: ${{ inputs.json }}
+        OS: ${{ runner.os }}
+        SCRIPT: ${{ github.action_path }}/build.sh
       run: |
-        ${{ github.action_path }}/build.sh
+        if [[ $OS == macOS ]]; then
+          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
+        else
+          "$SCRIPT"
+        fi
       shell: bash
 
     - name: ${{ fromJSON(inputs.json).action }} ${{ fromJSON(inputs.json).name }}
@@ -130,8 +147,14 @@ runs:
         JSON: ${{ inputs.json }}
         PRJ_ROOT: ${{ github.workspace }}
         PRJ_DATA_DIR: ${{ github.workspace }}/.std
+        OS: ${{ runner.os }}
+        SCRIPT: ${{ github.action_path }}/run.sh
       run: |
-        ${{ github.action_path }}/run.sh
+        if [[ $OS == macOS ]]; then
+          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
+        else
+          "$SCRIPT"
+        fi
       shell: bash
 
     - name: Populate Cache
@@ -140,7 +163,13 @@ runs:
         BUILDER: ${{ inputs.builder }}
         UNCACHED: ${{ steps.build.outputs.uncached }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        OS: ${{ runner.os }}
+        SCRIPT: ${{ github.action_path }}/cache.sh
       if: always() && env.CACHE != 'auto' && env.UNCACHED != '' && steps.build.conclusion == 'success'
       run: |
-        ${{ github.action_path }}/cache.sh
+        if [[ $OS == macOS ]]; then
+          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
+        else
+          "$SCRIPT"
+        fi
       shell: bash
