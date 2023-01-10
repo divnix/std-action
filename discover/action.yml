@@ -48,6 +48,12 @@ runs:
       env:
         TMPDIR: ${{ runner.temp }}
         FLAKE: "github:${{ github.repository }}/${{ github.sha }}"
+        OS: ${{ runner.os }}
+        SCRIPT: ${{ github.action_path }}/eval.sh
       run: |
-        ${{ github.action_path }}/eval.sh
+        if [[ $OS == macOS ]]; then
+          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
+        else
+          "$SCRIPT"
+        fi
       shell: bash
