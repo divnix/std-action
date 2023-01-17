@@ -46,22 +46,20 @@ runs:
       env:
         NIX_KEY_PATH: ${{ runner.temp }}/.nix-key
       run: |
+        # handle 🔑 material
         if [[ -n '${{ inputs.nix_key }}' ]]; then
-          echo "::group::Make Nix secret key."
           echo "${{ inputs.nix_key }}" >"$NIX_KEY_PATH"
           chmod 0600 "$NIX_KEY_PATH"
-          echo "::endgroup::"
-
           echo "NIX_KEY_PATH=$NIX_KEY_PATH" >> "$GITHUB_ENV"
         else
           echo "NIX_KEY_PATH=" >> "$GITHUB_ENV"
         fi
-
     - name: Setup SSH Keys
       if: inputs.nix_ssh_key != 'none'
       env:
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       run: |
+        #& ️🐕
         ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
         ssh-add - <<< "${{ inputs.nix_ssh_key }}"
       shell: bash
@@ -69,6 +67,7 @@ runs:
     - name: Setup SSH Known Hosts
       if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none'
       run: |
+        #& 🕵️‍♂️
         mkdir ~/.ssh
         echo "${{ inputs.ssh_known_hosts }}" >> ~/.ssh/known_hosts
         sudo chmod 0600 ~/.ssh/known_hosts
@@ -113,6 +112,7 @@ runs:
         DISCOVERY_SSH: ${{ inputs.discovery_ssh }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
       run: |
+        # pull 🦌 from discovery runner
         ssh "$DISCOVERY_SSH" -- \
           'nix-store --export \
             $(nix-store --query --requisites \
@@ -129,13 +129,8 @@ runs:
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
         JSON: ${{ inputs.json }}
         OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/build.sh
-      run: |
-        if [[ $OS == macOS ]]; then
-          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
-        else
-          "$SCRIPT"
-        fi
+        SCRIPT: ${{ github.action_path }}/_build.sh
+      run: ${{ github.action_path }}/build.sh
       shell: bash
 
     - name: ${{ fromJSON(inputs.json).action }} ${{ fromJSON(inputs.json).name }}
@@ -148,13 +143,8 @@ runs:
         PRJ_ROOT: ${{ github.workspace }}
         PRJ_DATA_DIR: ${{ github.workspace }}/.std
         OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/run.sh
-      run: |
-        if [[ $OS == macOS ]]; then
-          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
-        else
-          "$SCRIPT"
-        fi
+        SCRIPT: ${{ github.action_path }}/_run.sh
+      run: ${{ github.action_path }}/run.sh
       shell: bash
 
     - name: Populate Cache
@@ -164,12 +154,7 @@ runs:
         UNCACHED: ${{ steps.build.outputs.uncached }}
         SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
         OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/cache.sh
+        SCRIPT: ${{ github.action_path }}/_cache.sh
       if: always() && env.CACHE != 'auto' && env.UNCACHED != '' && steps.build.conclusion == 'success'
-      run: |
-        if [[ $OS == macOS ]]; then
-          nix run nixpkgs/nixpkgs-22.11-darwin#bash -- "$SCRIPT"
-        else
-          "$SCRIPT"
-        fi
+      run: ${{ github.action_path }}/cache.sh
       shell: bash
