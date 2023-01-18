@@ -3,12 +3,6 @@
 set -e
 shopt -s lastpipe
 
-function check_exec() {
-  path="$1"
-  shift
-  find -L "$path" -executable -type f "$@" 2>/dev/null
-}
-
 function run() {
   local action drv name
 
