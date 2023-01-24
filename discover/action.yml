@@ -18,6 +18,16 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Install Nix
+      uses: nixbuild/nix-quick-install-action@v21
+      if: startsWith(runner.name, 'discovery') == false
+      with:
+        nix_conf: |
+          experimental-features = nix-command flakes
+          accept-flake-config = true
+          trusted-users = runner
+          access-tokens = github.com=${{ inputs.github_pat }}
+
     - name: Cache Nix Store
       id: cache-nix
       if: startsWith(runner.name, 'discovery') == false
@@ -31,17 +41,6 @@ runs:
         restore-keys: |
           discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-
           discovery-${{ runner.os }}-${{ runner.arch }}-
-
-
-    - name: Install Nix
-      uses: nixbuild/nix-quick-install-action@v21
-      if: startsWith(runner.name, 'discovery') == false
-      with:
-        nix_conf: |
-          experimental-features = nix-command flakes
-          accept-flake-config = true
-          trusted-users = runner
-          access-tokens = github.com=${{ inputs.github_pat }}
 
     - name: Discover
       id: eval
