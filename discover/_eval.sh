@@ -9,6 +9,11 @@ function eval() {
 
   local system
 
+  nix_conf="$(mktemp -d)/nix.conf"
+  NIX_CONFIG=$(nix eval --raw --impure --apply <<<$(<nix_config.nix) "$FLAKE" | tee "$nix_conf")
+  NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
+  export NIX_USER_CONF_FILES
+
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
   mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --show-trace --json | jq -c 'unique_by(.actionDrv)|.[]')
 
@@ -26,11 +31,6 @@ function provision() {
   by_action=$(jq -sc 'group_by(.action)|map({key: .[0].action, value: .})| from_entries' <<< "${LIST[@]}")
 
   PROVISIONED='[]'
-
-  nix_conf="$(mktemp -d)/nix.conf"
-  NIX_CONFIG=$(nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
-  NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
-  export NIX_USER_CONF_FILES
 
   for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
     mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")
