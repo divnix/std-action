@@ -48,7 +48,9 @@ runs:
       id: eval
       env:
         TMPDIR: ${{ runner.temp }}
-        FLAKE: "github:${{ github.repository }}/${{ github.sha }}"
+        GH_TOKEN: ${{ github.token }}
+        OWNER_AND_REPO: ${{ github.repository }}
+        SHA: ${{ github.sha }}
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_eval.sh
       run: ${{ github.action_path }}/eval.sh

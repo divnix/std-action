@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-declare EVAL PROVISIONED NIX_CONFIG
+declare EVAL PROVISIONED NIX_CONFIG NIX_USER_CONF_FILES
 
 declare jq nix
 
@@ -13,6 +13,27 @@ nix="command nix"
 function eval_fn() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):eval()"
+
+  local nix_conf flake
+
+  tmp="$(mktemp)"
+
+  flake_file=${flake_file:="$tmp"}
+  flake_url=${flake_url:="github:$OWNER_AND_REPO/$SHA"}
+
+  if [ "$flake_file" = "$tmp" ]; then
+    # only fetch if not (locally) defined (for testing)
+    set -x; gh api \
+      -H "Accept: application/vnd.github+json" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+        "/repos/$OWNER_AND_REPO/contents/flake.nix?ref=$SHA" \
+        | $jq -r '.content|gsub("[\n\t]"; "")|@base64d' > $flake_file; set +x
+  fi
+
+  nix_conf="$(mktemp -d)/nix.conf"
+  NIX_CONFIG=$(nix eval --raw --impure --expr '(import '"$flake_file"').nixConfig or {}' --apply "$(< "${BASH_SOURCE[0]%/*}/nix_config.nix")" | tee "$nix_conf")
+  NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
+  export NIX_USER_CONF_FILES
 
   local system
 
@@ -24,7 +45,7 @@ function eval_fn() {
   # will be a list of actions
   EVAL=$(
     $nix eval --show-trace --json \
-      "$FLAKE#__std.ci'.$system"
+      "$flake_url#__std.ci'.$system"
   )
 
   if [ "$EVAL" = "[]" ]; then
@@ -40,12 +61,6 @@ function eval_fn() {
 function provision() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):provision()"
-
-  local nix_conf
-  nix_conf="$(mktemp -d)/nix.conf"
-  NIX_CONFIG=$($nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
-  NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
-  export NIX_USER_CONF_FILES
 
   local by_action actions proviso provisioned
   PROVISIONED='[]'
