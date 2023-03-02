@@ -2,10 +2,11 @@ name: "Standard Discovery"
 description: "Find out what to build & run in a Standard project."
 
 inputs:
-  github_pat:
-    description: "GitHub token for accessing private repos."
+  # Authentication c/o Nix for additional private repositories
+  nix_access_tokens:
+    description: "Access Tokens to allow Nix to fetch private repositories."
     required: false
-    default: ${{ github.token }}
+    default: github.com=${{ github.token }}
 
 outputs:
   hits:
@@ -41,7 +42,7 @@ runs:
           experimental-features = nix-command flakes
           accept-flake-config = true
           trusted-users = runner
-          access-tokens = github.com=${{ inputs.github_pat }}
+          access-tokens = ${{ inputs.nix_access_tokens }}
 
     - name: Discover
       id: eval

@@ -1,40 +1,36 @@
-name: "Sandard Action Runner"
+name: "Standard Action Runner"
 description: "Build a target and run its action."
 
 inputs:
-  github_pat:
-    description: "GitHub token for accessing private repos."
-    required: false
-    default: ${{ github.token }}
-  nix_key:
-    description: "Secret key used for Nix package signing."
-    required: false
-  cache:
-    description: "Nix cache to optionally upload artifacts to"
-    # auto refers to the local nix store, so nothing is uploaded by default
-    default: auto
-    required: false
-  builder:
-    description: "Nix store to build on."
-    default: auto
+  discovery_json:
+    description: "JSON describing the action matrix, found in the discovery phase."
     required: true
-  json:
-    description: "JSON describing the action, found in the discovery phase."
-    required: true
-  nix_ssh_key:
-    description: "SSH private key to send builds to a remote Nix builder."
-    default: none
+
+  nix_signing_key:
+    description: "Signing key used by Nix for package signing."
     required: false
-  ssh_known_hosts:
-    description: "SSH known host keys for Nix builders"
-    default: none
+  nix_cache:
+    description: "Nix cache to optionally cache (potentially signed) build results."
+    default: auto # auto refers to the local nix store, so nothing is uploaded by default
     required: false
   extra_nix_config:
     description: "Configuration to append to the nix.conf."
     required: false
-  discovery_ssh:
-    description: "Nix store URI for a dedicated discovery machine."
+
+  # Authentication c/o Nix for additional private repositories
+  nix_access_tokens:
+    description: "Access Tokens to allow Nix to fetch private repositories."
+    required: false
+    default: github.com=${{ github.token }}
+
+  # Discovery runner & builder host
+  discovery_host:
+    description: "SSH host URI for a persistent discovery runner."
     default: none
+    required: false
+  builder_host:
+    description: "Nix store URI of a remote builder."
+    default: auto
     required: false
 
 runs:
@@ -47,35 +43,17 @@ runs:
         NIX_KEY_PATH: ${{ runner.temp }}/.nix-key
       run: |
         # handle 🔑 material
-        if [[ -n '${{ inputs.nix_key }}' ]]; then
-          echo "${{ inputs.nix_key }}" >"$NIX_KEY_PATH"
+        if [[ -n '${{ inputs.nix_signing_key }}' ]]; then
+          echo "${{ inputs.nix_signing_key }}" >"$NIX_KEY_PATH"
           chmod 0600 "$NIX_KEY_PATH"
           echo "NIX_KEY_PATH=$NIX_KEY_PATH" >> "$GITHUB_ENV"
         else
           echo "NIX_KEY_PATH=" >> "$GITHUB_ENV"
         fi
-    - name: Setup SSH Keys
-      if: inputs.nix_ssh_key != 'none'
-      env:
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-      run: |
-        #& ️🐕
-        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
-        ssh-add - <<< "${{ inputs.nix_ssh_key }}"
-      shell: bash
-
-    - name: Setup SSH Known Hosts
-      if: inputs.nix_ssh_key != 'none' && inputs.ssh_known_hosts != 'none'
-      run: |
-        #& 🕵️‍♂️
-        mkdir ~/.ssh
-        echo "${{ inputs.ssh_known_hosts }}" >> ~/.ssh/known_hosts
-        sudo chmod 0600 ~/.ssh/known_hosts
-      shell: bash
 
     - name: Restore Cache & Discovery Results
       id: restore-cache
-      if: inputs.discovery_ssh == 'none' && runner.os != 'macOS'
+      if: inputs.discovery_host == 'none' && runner.os != 'macOS'
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
@@ -91,13 +69,13 @@ runs:
           experimental-features = nix-command flakes
           accept-flake-config = true
           trusted-users = runner
-          access-tokens = github.com=${{ inputs.github_pat }}
+          access-tokens = ${{ inputs.nix_access_tokens }}
           secret-key-files = ${{ env.NIX_KEY_PATH }}
           ${{ inputs.extra_nix_config }}
 
     - name: Restore Cache & Discovery Results
       id: restore-cache-mac
-      if: inputs.discovery_ssh == 'none' && runner.os == 'macOS'
+      if: inputs.discovery_host == 'none' && runner.os == 'macOS'
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
@@ -106,40 +84,37 @@ runs:
           ~root/.cache/nix
         key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
 
-    - name: Pull Derivations from Discovery Runner
-      if: inputs.discovery_ssh != 'none'
+    - name: Pull Derivations from Persistent Discovery Runner
+      if: inputs.discovery_host != 'none'
       env:
-        DISCOVERY_SSH: ${{ inputs.discovery_ssh }}
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
+        PERSISTENT_DISCOVERY_HOST: ${{ inputs.discovery_host }}
       run: |
-        # pull 🦌 from discovery runner
-        ssh "$DISCOVERY_SSH" -- \
+        # pull 🦌 from persistent discovery runner
+        ssh "$PERSISTENT_DISCOVERY_HOST" -- \
           'nix-store --export \
             $(nix-store --query --requisites \
-              ${{ fromJSON(inputs.json).actionDrv }}) \
+              ${{ fromJSON(inputs.discovery_json).actionDrv }}) \
           | zstd' \
         | unzstd \
         | nix-store --import &>/dev/null
       shell: bash
 
-    - name: Build ${{ fromJSON(inputs.json).name }}
+    - name: Build ${{ fromJSON(inputs.discovery_json).name }}
       id: build
       env:
-        BUILDER: ${{ inputs.builder }}
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-        JSON: ${{ inputs.json }}
+        BUILDER: ${{ inputs.builder_host }}
+        JSON: ${{ inputs.discovery_json }}
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_build.sh
       run: ${{ github.action_path }}/build.sh
       shell: bash
 
-    - name: ${{ fromJSON(inputs.json).action }} ${{ fromJSON(inputs.json).name }}
-      if: fromJSON(inputs.json).action != 'build'
+    - name: ${{ fromJSON(inputs.discovery_json).action }} ${{ fromJSON(inputs.discovery_json).name }}
+      if: fromJSON(inputs.discovery_json).action != 'build'
       env:
         BUILT: ${{ steps.build.outputs.uncached }}
-        BUILDER: ${{ inputs.builder }}
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
-        JSON: ${{ inputs.json }}
+        BUILDER: ${{ inputs.builder_host }}
+        JSON: ${{ inputs.discovery_json }}
         PRJ_ROOT: ${{ github.workspace }}
         PRJ_DATA_DIR: ${{ github.workspace }}/.std
         OS: ${{ runner.os }}
@@ -149,10 +124,9 @@ runs:
 
     - name: Populate Cache
       env:
-        CACHE: ${{ inputs.cache }}
-        BUILDER: ${{ inputs.builder }}
+        CACHE: ${{ inputs.nix_cache }}
+        BUILDER: ${{ inputs.builder_host }}
         UNCACHED: ${{ steps.build.outputs.uncached }}
-        SSH_AUTH_SOCK: ${{ runner.temp }}/ssh_agent.sock
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_cache.sh
       if: always() && env.CACHE != 'auto' && env.UNCACHED != '' && steps.build.conclusion == 'success'
