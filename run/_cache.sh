@@ -4,6 +4,8 @@ set -e
 
 function upload() {
 
+  echo "::debug::Running $(basename $BASH_SOURCE):upload()"
+
   echo "::debug::uploading$UNCACHED"
 
   if [[ -n "$NIX_KEY_PATH" && $CACHE =~ ^s3:// ]]; then

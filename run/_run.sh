@@ -4,6 +4,9 @@ set -e
 shopt -s lastpipe
 
 function run() {
+
+  echo "::debug::Running $(basename $BASH_SOURCE):run()"
+
   local action drv name
 
   jq -r '.action + " " + .name + " " + .actionDrv' <<< "$JSON" | read -r action name drv

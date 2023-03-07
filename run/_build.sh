@@ -8,6 +8,8 @@ declare -a uncached
 
 function calc_uncached() {
 
+  echo "::debug::Running $(basename $BASH_SOURCE):calc_uncached()"
+
   #shellcheck disable=SC2086
   mapfile -t uncached < <(nix-store --realise --dry-run $target 2>&1 1>/dev/null | sed '/paths will be fetched/,$ d' | grep '/nix/store/.*\.drv$')
 
@@ -25,6 +27,9 @@ function calc_uncached() {
 
 #shellcheck disable=SC2068
 function build() {
+
+  echo "::debug::Running $(basename $BASH_SOURCE):build()"
+
   if [[ -n ${uncached[*]} ]]; then
     #shellcheck disable=SC2086
     nix-build --eval-store auto --store "$BUILDER" "$target"
