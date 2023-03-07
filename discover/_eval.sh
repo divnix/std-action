@@ -7,6 +7,8 @@ declare PROVISIONED NIX_CONFIG
 
 function eval() {
 
+  echo "::debug::Running $(basename $BASH_SOURCE):eval()"
+
   local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
@@ -18,6 +20,8 @@ function eval() {
 }
 
 function provision() {
+
+  echo "::debug::Running $(basename $BASH_SOURCE):provision()"
 
   local by_action proviso
   local -a action_list
@@ -46,6 +50,8 @@ function provision() {
 }
 
 function output() {
+
+  echo "::debug::Running $(basename $BASH_SOURCE):output()"
 
   local json delim
 
