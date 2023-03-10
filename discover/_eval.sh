@@ -15,6 +15,11 @@ function eval() {
   mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --show-trace --json | jq -c 'unique_by(.actionDrv)|.[]')
 
   if [[ -z ${LIST[*]} ]]; then
+    echo "Evaluation didn't find any targets..."
+    echo "Please check that your Standard Registry isn't empty."
+    echo "Open a Nix Repl and type:"
+    echo "nix repl> :lf."
+    echo "nix repl> __std.\"ci'\".$system"
     exit 1
   fi
 }
