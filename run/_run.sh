@@ -9,7 +9,7 @@ function run() {
 
   local action drv name
 
-  jq -r '.action + " " + .name + " " + .actionDrv' <<< "$JSON" | read -r action name drv
+  jq -r '.action + " " + .name + " " + .actionDrv' <<<"$JSON" | read -r action name drv
 
   echo "::group::🏍️️ $action $name"
 
@@ -21,7 +21,7 @@ function run() {
   fi
 
   out="$(nix show-derivation "$drv" | jq -r '.[].outputs.out.path')"
-  if [[ -a $out ]]; then
+  if [[ -e $out ]]; then
     "$out"
   else
     nix-build "$drv" --no-out-link

@@ -1,26 +1,37 @@
 #!/usr/bin/env bash
 
 set -e
+set -o pipefail
 
-declare -a LIST
-declare PROVISIONED NIX_CONFIG
+declare EVAL PROVISIONED NIX_CONFIG
 
-function eval() {
+declare jq nix
+
+jq="command jq --compact-output"
+nix="command nix"
+
+function eval_fn() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):eval()"
 
   local system
 
-  system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
+  system="$(
+    $nix eval --raw --impure --expr \
+      'builtins.currentSystem'
+  )"
 
-  # unique_by(.actionDrv) removes duplicate targets, such as 
-  mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --show-trace --json | jq -c '.[]')
+  # will be a list of actions
+  EVAL=$(
+    $nix eval --show-trace --json \
+      "$FLAKE#__std.ci'.$system"
+  )
 
-  if [[ -z ${LIST[*]} ]]; then
+  if [ "$EVAL" = "[]" ]; then
     echo "Evaluation didn't find any targets..."
     echo "Please check that your Standard Registry isn't empty."
     echo "Open a Nix Repl and type:"
-    echo "nix repl> :lf."
+    echo "nix repl> :lf ."
     echo "nix repl> __std.\"ci'\".$system"
     exit 1
   fi
@@ -30,33 +41,34 @@ function provision() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):provision()"
 
-  local by_action proviso
-  local -a action_list
   local nix_conf
-
-  by_action=$(jq -sc 'group_by(.action)|map({key: .[0].action, value: .})| from_entries' <<< "${LIST[@]}")
-
-  PROVISIONED='[]'
-
   nix_conf="$(mktemp -d)/nix.conf"
-  NIX_CONFIG=$(nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
+  NIX_CONFIG=$($nix eval --raw "$FLAKE#__std.nixConfig" | tee "$nix_conf")
   NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
   export NIX_USER_CONF_FILES
 
-  for type in $(jq -r 'to_entries[].key' <<< "$by_action"); do
-    mapfile -t action_list < <(jq -c ".${type}[]" <<< "$by_action")
-    proviso=$(jq -sr '.[0].proviso' <<< "${action_list[@]}")
-    if [[ $proviso != 'null' ]]; then
+  local by_action actions proviso provisioned
+  PROVISIONED='[]'
+
+  # group the list of actions by action and make that action the key
+  by_action=$($jq --slurp '.[] | group_by(.action) | map({key: .[0].action, value: .}) | from_entries' <<<"${EVAL}")
+
+  for action in $($jq --raw-output '.|keys[]' <<<"$by_action"); do
+    actions=$($jq ".${action}" <<<"${by_action}")
+    proviso=$($jq --raw-output ".${action}[0].proviso|strings" <<<"${by_action}")
+    if test -n $proviso; then
       # shellcheck disable=SC1090
-      . "$proviso"
-      echo "::debug::Running $(basename $proviso):proviso()"
-      echo "::debug::Action List: ${action_list[@]}"
-      proviso action_list PROVISIONED
-      echo "::debug::Provisioned after proviso check: $PROVISIONED"
+      echo "::debug::Running $(basename $proviso)"
+      # this trick doesn't require proviso to be executable, as created by builtins.toFile
+      function _proviso() { . "$proviso"; }
+      provisioned="$(_proviso "$actions")"
+      unset -f _proviso
+      echo "::debug::Provisioned after proviso check: $provisioned"
     else
       echo "::debug::No proviso on action, passing all actions through."
-      PROVISIONED=$(jq -cs '. += $p' --argjson p "$PROVISIONED" <<< "${action_list[@]}")
+      provisioned="$actions"
     fi
+    PROVISIONED="$($jq '. + $new' --argjson new "$provisioned" <<<"$PROVISIONED")"
   done
 }
 
@@ -66,7 +78,8 @@ function output() {
 
   local json delim
 
-  json="$(jq -c '
+  json="$(
+    $jq '
       group_by(.block)
       | map({
         key: .[0].block,
@@ -79,7 +92,7 @@ function output() {
           | from_entries
         )
       })
-      | from_entries' <<< "$PROVISIONED"
+      | from_entries' <<<"$PROVISIONED"
   )"
 
   delim=$RANDOM
@@ -89,27 +102,28 @@ function output() {
     "nix_conf<<$delim" \
     "${NIX_CONFIG[@]}" \
     "$delim" \
-    >> "$GITHUB_OUTPUT"
+    >>"$GITHUB_OUTPUT"
 
   echo "::debug::$json"
 }
 
-
 echo "::group::🔎 Start Discovery ..."
-eval
+eval_fn
 provision
 echo "::endgroup::"
 
 echo "::group::✨ Find potential targets ..."
-echo "${LIST[@]}" | jq -r '"//\(.cell)/\(.block)/\(.name):\(.action)"'
+echo "${EVAL}" | jq -r '.[] | "//\(.cell)/\(.block)/\(.name):\(.action)"'
 echo "::endgroup::"
 
 echo "::group::🌲️ Recycle previous work ..."
 echo "... and only procede with these:"
-echo "${PROVISIONED[@]}" | jq '.[]' | jq -r '"//\(.cell)/\(.block)/\(.name):\(.action)"'
+echo "${PROVISIONED}" | jq -r '.[] | "//\(.cell)/\(.block)/\(.name):\(.action)"'
 echo "::endgroup::"
 
 echo "::group::📞️ Inform the build matrix ..."
 echo "... to tap the wire, enable debug logs :-)"
 output
 echo "::endgroup::"
+
+unset jq nix

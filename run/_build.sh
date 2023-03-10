@@ -2,7 +2,7 @@
 
 set -e
 
-target=$(jq -er '.actionDrv' <<< "$JSON")
+target=$(jq -er '.actionDrv' <<<"$JSON")
 declare -r target
 declare -a uncached
 
@@ -21,9 +21,8 @@ function calc_uncached() {
 
   echo "::debug::uncached paths: ${uncached[*]}"
 
-  echo "uncached=${uncached[*]}" >> "$GITHUB_OUTPUT"
+  echo "uncached=${uncached[*]}" >>"$GITHUB_OUTPUT"
 }
-
 
 #shellcheck disable=SC2068
 function build() {
