@@ -47,8 +47,12 @@ function provision() {
     if [[ $proviso != 'null' ]]; then
       # shellcheck disable=SC1090
       . "$proviso"
+      echo "::debug::Running $(basename $proviso):proviso()"
+      echo "::debug::Action List: ${action_list[@]}"
       proviso action_list PROVISIONED
+      echo "::debug::Provisioned after proviso check: $PROVISIONED"
     else
+      echo "::debug::No proviso on action, passing all actions through."
       PROVISIONED=$(jq -cs '. += $p' --argjson p "$PROVISIONED" <<< "${action_list[@]}")
     fi
   done
