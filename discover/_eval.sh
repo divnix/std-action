@@ -12,7 +12,9 @@ function eval() {
   local system
 
   system="$(nix eval --raw --impure --expr 'builtins.currentSystem')"
-  mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --show-trace --json | jq -c 'unique_by(.actionDrv)|.[]')
+
+  # unique_by(.actionDrv) removes duplicate targets, such as 
+  mapfile -t LIST < <(nix eval "$FLAKE#__std.ci'.$system" --show-trace --json | jq -c '.[]')
 
   if [[ -z ${LIST[*]} ]]; then
     echo "Evaluation didn't find any targets..."
