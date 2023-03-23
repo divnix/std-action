@@ -12,9 +12,9 @@ nix="command nix"
 
 function eval_fn() {
 
-  echo "::debug::Running $(basename $BASH_SOURCE):eval()"
+  echo "::debug::Running $(basename "${BASH_SOURCE[0]}"):eval()"
 
-  local nix_conf flake
+  local nix_conf
 
   tmp="$(mktemp)"
 
@@ -27,7 +27,7 @@ function eval_fn() {
       -H "Accept: application/vnd.github+json" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
         "/repos/$OWNER_AND_REPO/contents/flake.nix?ref=$SHA" \
-        | $jq -r '.content|gsub("[\n\t]"; "")|@base64d' > $flake_file; set +x
+        | $jq -r '.content|gsub("[\n\t]"; "")|@base64d' > "$flake_file"; set +x
   fi
 
   nix_conf="$(mktemp -d)/nix.conf"
@@ -60,7 +60,7 @@ function eval_fn() {
 
 function provision() {
 
-  echo "::debug::Running $(basename $BASH_SOURCE):provision()"
+  echo "::debug::Running $(basename "${BASH_SOURCE[0]}"):provision()"
 
   local by_action actions proviso provisioned
   PROVISIONED='[]'
@@ -71,9 +71,8 @@ function provision() {
   for action in $($jq --raw-output '.|keys[]' <<<"$by_action"); do
     actions=$($jq ".${action}" <<<"${by_action}")
     proviso=$($jq --raw-output ".${action}[0].proviso|strings" <<<"${by_action}")
-    if test -n $proviso; then
-      # shellcheck disable=SC1090
-      echo "::debug::Running $(basename $proviso)"
+    if [[ -n $proviso ]]; then
+      echo "::debug::Running ${proviso##*/}"
       # this trick doesn't require proviso to be executable, as created by builtins.toFile
       function _proviso() { . "$proviso"; }
       provisioned="$(_proviso "$actions")"
@@ -89,7 +88,7 @@ function provision() {
 
 function output() {
 
-  echo "::debug::Running $(basename $BASH_SOURCE):output()"
+  echo "::debug::Running $(basename "${BASH_SOURCE[0]}"):output()"
 
   local json delim
 
