@@ -29,7 +29,10 @@ function build() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):build()"
 
-  nix-build --eval-store auto --store "$BUILDER" "$target"
+  if [[ -n ${uncached[*]} ]]; then
+    #shellcheck disable=SC2086
+    nix-build --eval-store auto --store "$BUILDER" "$target"
+  fi
 }
 
 echo "::group::📞️ Get info from discovery ..."
