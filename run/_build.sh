@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -o pipefail
 
 target=$(jq -er '.actionDrv' <<<"$JSON")
 declare -r target
