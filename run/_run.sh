@@ -8,11 +8,11 @@ function run() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):run()"
 
-  local action drv name
+  local action drv cell block target
 
-  jq -r '.action + " " + .name + " " + .actionDrv' <<<"$JSON" | read -r action name drv
+  jq -r '.action + " " + .name + " " + .cell + " " + .block + " " + .actionDrv' <<<"$JSON" | read -r action target cell block drv
 
-  echo "::group::🏍️️ $action $name"
+  echo "::group::🏍️️ $action //$cell/$block/$target"
 
   if [[ -z $BUILT ]]; then
     # should be fetched, since we have already checked cache status in build step
@@ -22,12 +22,13 @@ function run() {
   fi
 
   out="$(nix show-derivation "$drv" | jq -r '.[].outputs.out.path')"
-  if [[ -e $out ]]; then
-    "$out"
-  else
+  if [[ ! -e $out ]]; then
     nix-build "$drv" --no-out-link
-    "$out"
   fi
+
+  # this trick preserves set -e & set -o pipefail from above
+  function _run() { . "$out"; }
+  _run
 }
 
 run
