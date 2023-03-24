@@ -35,6 +35,8 @@ function eval_fn() {
   NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
   export NIX_USER_CONF_FILES
 
+  nix show-config
+
   local system
 
   system="$(
@@ -72,11 +74,13 @@ function provision() {
     actions=$($jq ".${action}" <<<"${by_action}")
     proviso=$($jq --raw-output ".${action}[0].proviso|strings" <<<"${by_action}")
     if [[ -n $proviso ]]; then
-      echo "::debug::Running ${proviso##*/}"
+      echo "Running ${proviso##*/}"
+      set -x
       # this trick doesn't require proviso to be executable, as created by builtins.toFile
       function _proviso() { . "$proviso"; }
       provisioned="$(_proviso "$actions")"
       unset -f _proviso
+      set +x
       echo "::debug::Provisioned after proviso check: $provisioned"
     else
       echo "::debug::No proviso on action, passing all actions through."
