@@ -8,9 +8,10 @@ declare -a uncached
 
 function calc_uncached() {
 
-  echo "::debug::Running $(basename $BASH_SOURCE):calc_uncached()"
+  echo "::debug::Running $(basename "${BASH_SOURCE[0]}"):calc_uncached()"
 
   #shellcheck disable=SC2086
+  # remove any lines after 'will be fetched' so only uncached paths are left
   mapfile -t uncached < <(nix-store --realise --dry-run $target 2>&1 1>/dev/null | sed '/will be fetched/,$ d' | grep '/nix/store/.*\.drv$')
 
   # filter out builds that are always run locally, and thus, not cached
@@ -26,13 +27,10 @@ function calc_uncached() {
 
 #shellcheck disable=SC2068
 function build() {
+  echo "::debug::Running $(basename "${BASH_SOURCE[0]}"):build()"
 
-  echo "::debug::Running $(basename $BASH_SOURCE):build()"
-
-  if [[ -n ${uncached[*]} ]]; then
-    #shellcheck disable=SC2086
-    nix-build --eval-store auto --store "$BUILDER" "$target"
-  fi
+  #shellcheck disable=SC2086
+  nix-build --eval-store auto --store "$BUILDER" "$target"
 }
 
 echo "::group::📞️ Get info from discovery ..."
@@ -43,6 +41,8 @@ echo "::group::🧮 Collect what will be uploaded to the cache ..."
 calc_uncached
 echo "::endgroup::"
 
-echo "::group::🏗️ Build target ..."
-build
-echo "::endgroup::"
+if [[ -n ${uncached[*]} ]]; then
+  echo "::group::🏗️ Build target ..."
+  build
+  echo "::endgroup::"
+fi
