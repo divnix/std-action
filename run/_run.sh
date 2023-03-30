@@ -14,7 +14,7 @@ function run() {
 
   echo "::group::🏍️️ $action //$cell/$block/$target"
 
-  if [[ -z $BUILT ]]; then
+  if [[ -z $(head "$UNCACHED_FILE") ]]; then
     # should be fetched, since we have already checked cache status in build step
     nix-build "$drv" --no-out-link
   elif [[ $BUILDER != auto ]]; then

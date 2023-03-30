@@ -25,7 +25,7 @@ function calc_uncached() {
 
   echo "::debug::uncached paths: ${uncached[*]}"
 
-  echo "uncached=${uncached[*]}" >>"$GITHUB_OUTPUT"
+  echo "${uncached[*]}" > "$UNCACHED_FILE"
 }
 
 #shellcheck disable=SC2068

@@ -7,8 +7,6 @@ function upload() {
 
   echo "::debug::Running $(basename $BASH_SOURCE):upload()"
 
-  echo "::debug::uploading$UNCACHED"
-
   if [[ -n $NIX_KEY_PATH && $CACHE =~ ^s3:// ]]; then
     if [[ $CACHE =~ \? ]]; then
       CACHE="$CACHE&secret-key=$NIX_KEY_PATH"
@@ -17,7 +15,7 @@ function upload() {
     fi
   fi
 
-  echo "$UNCACHED" | xargs -- nix copy --from "$BUILDER" --to "$CACHE"
+  cat "$UNCACHED_FILE" | xargs -- nix copy --from "$BUILDER" --to "$CACHE"
 }
 
 echo "::group::🌲 Recycle work into cache ..."
