@@ -106,13 +106,14 @@ runs:
         JSON: ${{ inputs.discovery_json }}
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_build.sh
+        UNCACHED_FILE: ${{ runner.temp }}/uncached
       run: ${{ github.action_path }}/build.sh
       shell: bash
 
     - name: ${{ fromJSON(inputs.discovery_json).action }} ${{ fromJSON(inputs.discovery_json).name }}
       if: fromJSON(inputs.discovery_json).action != 'build'
       env:
-        BUILT: ${{ steps.build.outputs.uncached }}
+        UNCACHED_FILE: ${{ runner.temp }}/uncached
         BUILDER: ${{ inputs.builder_host }}
         JSON: ${{ inputs.discovery_json }}
         PRJ_ROOT: ${{ github.workspace }}
@@ -126,9 +127,9 @@ runs:
       env:
         CACHE: ${{ inputs.nix_cache }}
         BUILDER: ${{ inputs.builder_host }}
-        UNCACHED: ${{ steps.build.outputs.uncached }}
+        UNCACHED_FILE: ${{ runner.temp }}/uncached
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_cache.sh
-      if: always() && env.CACHE != 'auto' && env.UNCACHED != '' && steps.build.conclusion == 'success'
+      if: always() && env.CACHE != 'auto' && steps.build.outputs.has_uncached == 'true' && steps.build.conclusion == 'success'
       run: ${{ github.action_path }}/cache.sh
       shell: bash
