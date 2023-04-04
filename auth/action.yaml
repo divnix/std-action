@@ -7,11 +7,11 @@ inputs:
     required: true
   discovery_known_host_entry:
     description: "sshd's known_hosts entry for the discovery runner."
-    default: none
+    default: ""
     required: false
   builder_known_host_entry:
     description: "sshd's known_hosts entry for the remote builder."
-    default: none
+    default: ""
     required: false
 
 runs:
@@ -32,9 +32,13 @@ runs:
       run: |
         # 🕵️‍♂️
         mkdir ~/.ssh
-        if [[ -n '${{ inputs.discovery_known_host_entry }}' ]]; then
+        if [[ -n '${{ inputs.discovery_known_host_entry }}' ]]
+        then
           echo "${{ inputs.discovery_known_host_entry }}" >> ~/.ssh/known_hosts
-        elif [[ -n '${{ inputs.builder_known_host_entry }}' ]]; then
+        fi
+
+        if [[ -n '${{ inputs.builder_known_host_entry }}' ]]
+        then
           echo "${{ inputs.builder_known_host_entry }}" >> ~/.ssh/known_hosts
         fi
         sudo chmod 0600 ~/.ssh/known_hosts
