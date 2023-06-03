@@ -23,15 +23,17 @@ function eval_fn() {
 
   if [ "$flake_file" = "$tmp" ]; then
     # only fetch if not (locally) defined (for testing)
-    set -x; gh api \
+    set -x
+    gh api \
       -H "Accept: application/vnd.github+json" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
-        "/repos/$OWNER_AND_REPO/contents/flake.nix?ref=$SHA" \
-        | $jq -r '.content|gsub("[\n\t]"; "")|@base64d' > "$flake_file"; set +x
+      "/repos/$OWNER_AND_REPO/contents/flake.nix?ref=$SHA" |
+      $jq -r '.content|gsub("[\n\t]"; "")|@base64d' >"$flake_file"
+    set +x
   fi
 
   nix_conf="$(mktemp -d)/nix.conf"
-  NIX_CONFIG=$(nix eval --raw --impure --expr '(import '"$flake_file"').nixConfig or {}' --apply "$(< "${BASH_SOURCE[0]%/*}/nix_config.nix")" | tee "$nix_conf")
+  NIX_CONFIG=$(nix eval --raw --impure --expr '(import '"$flake_file"').nixConfig or {}' --apply "$(<"${BASH_SOURCE[0]%/*}/nix_config.nix")" | tee "$nix_conf")
   NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
   export NIX_USER_CONF_FILES
 

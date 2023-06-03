@@ -1,0 +1,25 @@
+branch_whitelist = ["main", "release/**"]
+ignore_merge_commits = true
+pre_bump_hooks = [
+  "git switch -c \"$(echo \"release/{{version}}\" | sed 's/\\.[^.]*$//')\" || git switch \"$(echo \"release/{{version}}\" | sed 's/\\.[^.]*$//')\"",
+  "echo {{version}} > ./VERSION"
+]
+post_bump_hooks = [
+  "git push --set-upstream origin \"$(echo \"release/{{version}}\" | sed 's/\\.[^.]*$//')\"",
+  "git push origin v{{version}}",
+  "cog -q changelog --at v{{version}}",
+  "git switch main",
+  "git checkout \"$(echo \"release/{{version}}\" | sed 's/\\.[^.]*$//')\" -- ./VERSION",
+  "git merge \"$(echo \"release/{{version}}\" | sed 's/\\.[^.]*$//')\"",
+  "git push",
+  "echo {{version+minor-dev}} > ./VERSION",
+  "git add VERSION"
+]
+tag_prefix = "v"
+
+[changelog]
+owner = "divnix"
+path = "CHANGELOG.md"
+remote = "github.com"
+repository = "std-action"
+template = "remote"

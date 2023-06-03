@@ -1,25 +1,28 @@
-with builtins;
-let
-  boolToString = b: if b then "true" else "false";
+with builtins; let
+  boolToString = b:
+    if b
+    then "true"
+    else "false";
 
-  /* Check whether a value can be coerced to a string.
-     The value must be a string, path, or attribute set.
+  /*
+  Check whether a value can be coerced to a string.
+  The value must be a string, path, or attribute set.
 
-     String-like values can be used without explicit conversion in
-     string interpolations and in most functions that expect a string.
-   */
+  String-like values can be used without explicit conversion in
+  string interpolations and in most functions that expect a string.
+  */
   isStringLike = x:
-    isString x ||
-    isPath x ||
-    x ? outPath ||
-    x ? __toString;
+    isString x
+    || isPath x
+    || x ? outPath
+    || x ? __toString;
 
   mapAttrsToList =
     # A function, given an attribute's name and value, returns a new value.
     f:
     # Attribute set to map over.
     attrs:
-    map (name: f name attrs.${name}) (attrNames attrs);
+      map (name: f name attrs.${name}) (attrNames attrs);
 
   mkValueString = v:
     if v == null

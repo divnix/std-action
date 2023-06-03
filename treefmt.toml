@@ -1,0 +1,28 @@
+[formatter]
+
+[formatter.nix]
+command = "alejandra"
+includes = ["*.nix"]
+
+[formatter.prettier]
+command = "prettier"
+excludes = ["**.min.js"]
+includes = [
+  "*.css",
+  "*.html",
+  "*.js",
+  "*.json",
+  "*.jsx",
+  "*.md",
+  "*.mdx",
+  "*.scss",
+  "*.ts",
+  "*.yaml",
+  "*.toml"
+]
+options = ["--plugin", "prettier-plugin-toml", "--write"]
+
+[formatter.shell]
+command = "shfmt"
+includes = ["*.sh"]
+options = ["-i", "2", "-s", "-w"]

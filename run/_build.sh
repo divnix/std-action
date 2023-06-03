@@ -13,8 +13,8 @@ function calc_uncached() {
 
   #shellcheck disable=SC2086
   mapfile -t uncached < <(
-    nix-store --realise --dry-run $target 2>&1 1>/dev/null \
-    | sed -nrf "$( dirname -- "${BASH_SOURCE[0]}" )/build-uncached-extractor.sed"
+    nix-store --realise --dry-run $target 2>&1 1>/dev/null |
+      sed -nrf "$(dirname -- "${BASH_SOURCE[0]}")/build-uncached-extractor.sed"
   )
 
   # filter out builds that are always run locally, and thus, not cached
@@ -25,7 +25,7 @@ function calc_uncached() {
 
   echo "::debug::uncached paths: ${uncached[*]}"
 
-  echo "${uncached[*]}" > "$UNCACHED_FILE"
+  echo "${uncached[*]}" >"$UNCACHED_FILE"
 
   if [[ -n ${uncached[*]} ]]; then
     echo "has_uncached=true" >>"$GITHUB_OUTPUT"

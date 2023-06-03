@@ -36,7 +36,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-
     - name: Emplace Nix Key
       shell: bash
       env:

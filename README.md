@@ -5,7 +5,6 @@
 - To set up AWS Credentials for an S3 Cache, find details [here](https://github.com/aws-actions/configure-aws-credentials)
 - **Warning:** This is still under active development and testing. You're likely better off waiting a little while, still.
   - But it's already being used with success :smile:
- 
 
 ```yaml
 # .github/workflows/ci.yml
@@ -20,9 +19,7 @@ on:
 permissions:
   contents: read
 
-
 jobs:
-
   discover:
     outputs:
       hits: ${{ steps.discovery.outputs.hits }}
@@ -85,11 +82,12 @@ Hits from the discovery phase are namespaced by Block and Action.
 
 That means:
 
-  - In: `target: ${{ fromJSON(needs.discover.outputs.hits).packages.build }}`
-    - `packages` is the name of a Standard Block
-    - `build` is the name of an Action of that Block
+- In: `target: ${{ fromJSON(needs.discover.outputs.hits).packages.build }}`
+  - `packages` is the name of a Standard Block
+  - `build` is the name of an Action of that Block
 
 This example would be defined in `flake.nix` as such
+
 ```nix
 {
   /* ... */
@@ -105,6 +103,7 @@ This example would be defined in `flake.nix` as such
 ```
 
 An example schema of the json returned by the dicovery phase:
+
 ```json
 {
   "containers": {
