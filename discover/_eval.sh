@@ -45,7 +45,7 @@ function eval_fn() {
   # will be a list of actions
   EVAL=$(
     $nix eval --show-trace --json \
-      "$flake_url#__std.ci'.$system"
+      "$flake_url#__std.ci.$system"
   )
 
   if [ "$EVAL" = "[]" ]; then
@@ -53,7 +53,7 @@ function eval_fn() {
     echo "Please check that your Standard Registry isn't empty."
     echo "Open a Nix Repl and type:"
     echo "nix repl> :lf ."
-    echo "nix repl> __std.\"ci'\".$system"
+    echo "nix repl> __std.\"ci\".$system"
     exit 1
   fi
 }
