@@ -89,6 +89,7 @@ function provision() {
 function output() {
 
   echo "::debug::Running $(basename "${BASH_SOURCE[0]}"):output()"
+  echo "::debug::See output json further down ..."
 
   local json delim
 
@@ -117,8 +118,6 @@ function output() {
     "${NIX_CONFIG[@]}" \
     "$delim" \
     >>"$GITHUB_OUTPUT"
-
-  echo "::debug::$json"
 }
 
 echo "::group::🔎 Start Discovery ..."
