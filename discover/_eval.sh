@@ -71,20 +71,41 @@ function provision() {
   by_action=$($jq --slurp '.[] | group_by(.action) | map({key: .[0].action, value: .}) | from_entries' <<<"${EVAL}")
 
   for action in $($jq --raw-output '.|keys[]' <<<"$by_action"); do
-    actions=$($jq ".${action}" <<<"${by_action}")
-    proviso=$($jq --raw-output ".${action}[0].proviso|strings" <<<"${by_action}")
-    if [[ -n $proviso ]]; then
-      echo "::debug::Running ${proviso##*/}"
-      # this trick doesn't require proviso to be executable, as created by builtins.toFile
-      function _proviso() { . "$proviso"; }
-      provisioned="$(_proviso "$actions")"
-      unset -f _proviso
-      echo "::debug::Provisioned after proviso check: $provisioned"
-    else
-      echo "::debug::No proviso on action, passing all actions through."
-      provisioned="$actions"
+    readarray -t actions < <($jq --raw-output ".${action}[] | @base64" <<<"${by_action}")
+    echo "Check proviso for all ${#actions[@]} '$action' action(s) ..."
+    # this trick doesn't require proviso to be executable, as created by builtins.toFile
+    function _proviso() {
+        _jq() { echo "${2}" | command base64 --decode | command jq --compact-output --raw-output "${1}"; }
+        local action="$1"
+        >&2 echo -n "... checking $(_jq '"//\(.cell)/\(.block)/\(.name):\(.action)"' $action)"
+        local proviso=$(_jq '.proviso|strings' $action)
+        if [[ -n $proviso ]]; then
+          cmd=(bash -o errexit -o nounset -o pipefail "$proviso" "$(_jq '.' $action)")
+          if ${cmd[@]}; then
+            >&2 echo " - take it."
+            echo "$action"
+          else
+            >&2 echo " - drop it."
+          fi
+        else
+          >&2 echo " - take it (no proviso)."
+          echo "$action"
+        fi
+    }
+    export -f _proviso
+    readarray -t args < <(
+      parallel -j0 _proviso ::: "${actions[@]}"
+      # for a in ${actions[@]}; do _proviso "$a"; done
+    )
+    echo "Continue with ${#args[@]} '$action' action(s)."
+    if [[ ${#args[@]} -ne 0 ]]; then
+      PROVISIONED="$(
+        $jq '. + ($ARGS.positional | map(@base64d|fromjson))' \
+        --args "${args[@]}" \
+        <<<"$PROVISIONED"
+      )"
     fi
-    PROVISIONED="$($jq '. + $new' --argjson new "$provisioned" <<<"$PROVISIONED")"
+    unset -f _proviso
   done
 }
 
@@ -112,6 +133,10 @@ function output() {
       | from_entries' <<<"$PROVISIONED"
   )"
 
+  base64 -w0 <<<"$json"
+  echo
+  echo "(base64)"
+
   delim=$RANDOM
 
   printf "%s\n" \
@@ -122,22 +147,23 @@ function output() {
     >>"$GITHUB_OUTPUT"
 }
 
-echo "::group::🔎 Start Discovery ..."
+echo "::group::📓 Evaluate ..."
 eval_fn
-provision
 echo "::endgroup::"
 
 echo "::group::✨ Find potential targets ..."
 echo "${EVAL}" | jq -r '.[] | "//\(.cell)/\(.block)/\(.name):\(.action)"'
 echo "::endgroup::"
 
-echo "::group::🌲️ Recycle previous work ..."
-echo "... and only procede with these:"
+echo "::group::🔎 Check for proviso ..."
+provision
+echo "::endgroup::"
+
+echo "::group::🌲️ Save work and only proceed with  ..."
 echo "${PROVISIONED}" | jq -r '.[] | "//\(.cell)/\(.block)/\(.name):\(.action)"'
 echo "::endgroup::"
 
 echo "::group::📞️ Inform the build matrix ..."
-echo "... to tap the wire, enable debug logs :-)"
 output
 echo "::endgroup::"
 
