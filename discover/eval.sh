@@ -75,17 +75,17 @@ function provision() {
     )
     echo "Continue with ${#args[@]} '$action' action(s)."
     if [[ ${#args[@]} -ne 0 ]]; then
-      PROVISIONED=$(
-        command jq --compact-output '
-            . + ($ARGS.positional | map(
-              @base64d|fromjson|(
-                . * {"jobName": "\(.action) //\(.cell)/\(.block)/\(.name)"})
-              )
-            )
-          ' \
-          --args "${args[@]}" \
-          <<<"$PROVISIONED"
-      )
+      jqprg='. + ($ARGS.positional | map(@base64d|fromjson|
+        (. * {"jobName": "\(.action) //\(.cell)/\(.block)/\(.name)"})
+      ))'
+      if ! PROVISIONED=$(
+        command jq --compact-output "$jqprg" --args "${args[@]}"  <<<"$PROVISIONED"
+      ); then
+        echo "An error occurred while aggregating actions after proviso."
+        echo "To replicate, run:"
+        echo "jq '$jqprg' --args ${args[@]} <<<[]"
+        exit 1
+      fi
     fi
     unset -f _proviso
   done
