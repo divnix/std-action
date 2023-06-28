@@ -94,8 +94,12 @@ function provision() {
     }
     export -f _proviso
     readarray -t args < <(
-      parallel -j0 _proviso ::: "${actions[@]}"
-      # for a in ${actions[@]}; do _proviso "$a"; done
+     if ! command -v parallel &> /dev/null
+     then
+       for a in ${actions[@]}; do _proviso "$a"; done
+     else
+       parallel -j0 _proviso ::: "${actions[@]}"
+     fi
     )
     echo "Continue with ${#args[@]} '$action' action(s)."
     if [[ ${#args[@]} -ne 0 ]]; then
