@@ -76,7 +76,13 @@ function provision() {
     echo "Continue with ${#args[@]} '$action' action(s)."
     if [[ ${#args[@]} -ne 0 ]]; then
       PROVISIONED=$(
-        command jq --compact-output '. + ($ARGS.positional | map(@base64d|fromjson))' \
+        command jq --compact-output '
+            . + ($ARGS.positional | map(
+              @base64d|fromjson|(
+                . * {"jobName": "\(.action) //\(.cell)/\(.block)/\(.name)"})
+              )
+            )
+          ' \
           --args "${args[@]}" \
           <<<"$PROVISIONED"
       )
