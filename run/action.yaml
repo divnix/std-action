@@ -6,6 +6,7 @@ inputs:
   discovery_json:
     description: "JSON describing the action matrix, found in the discovery phase."
     required: true
+    default: ${{ toJSON(matrix.target) }}
   # Discovery runner & builder host
   discovery_host:
     description: "SSH host URI for a persistent discovery runner."
