@@ -7,21 +7,28 @@ inputs:
     description: "JSON describing the action matrix, found in the discovery phase."
     required: true
     default: ${{ toJSON(matrix.target) }}
-  # Discovery runner & builder host
-  discovery_host:
-    description: "SSH host URI for a persistent discovery runner."
-    default: none
-    required: false
+
   builder_host:
     description: "Nix store URI of a remote builder."
     default: auto
     required: false
 
+  ffBuildInstructions:
+    required: false
+    default: false
+    description: |
+      Whether to fast forward build instruction (derivations).
+
+      If set to true, the worker will try to ssh to a host alias called
+      'discovery' in order to fetch derviation closures from the discovery
+      host. Access to that discovery host with alias 'discovery' must be
+      provided indendently via SSH configuraiton.
+
 runs:
   using: "composite"
   steps:
     - if: contains( runner.os, 'macos')
-      name: Install compatbile bash 5+
+      name: Install compatible bash 5+
       shell: bash
       run: |
         nix profile install nixpkgs/nixpkgs-22.11-darwin#bash
@@ -39,10 +46,10 @@ runs:
         echo "target=$target" >> $GITHUB_ENV
         echo "action=$action" >> $GITHUB_ENV
         echo "actionDrv=$actionDrv" >> $GITHUB_ENV
-        echo "actionDrvBasename=$(basename $actionDrv)" >> $GITHUB_ENV
 
     - uses: actions/cache/restore@v3
       id: cache
+      if: inputs.ffBuildInstructions == 'false'
       with:
         path: ${{ runner.temp }}/eval-store
         key: drv-pack-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
@@ -54,6 +61,7 @@ runs:
       shell: bash
       env:
         EVALSTORE_IMPORT: ${{ runner.temp }}/eval-store
+        DRV_IMPORT_FROM_DISCOVERY: ${{ inputs.ffBuildInstructions }}
         # prj-spec <https://github.com/numtide/prj-spec>
         PRJ_ROOT: ${{ github.workspace }}
         PRJ_DATA_HOME: ${{ runner.temp }}/.data

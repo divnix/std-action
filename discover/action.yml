@@ -2,17 +2,33 @@ name: "Standard Discovery"
 description: "Find out what to build & run in a Standard project."
 author: "The Standard Authors"
 
+inputs:
+
+  ffBuildInstructions:
+    required: false
+    default: false
+    description: |
+      Whether to fast forward build instruction (derivations).
+
+      If set to true, discovery will not populate the GH Action Cache
+      with the derviations that have been the result of the evaluation.
+      Instead, workers will be expected to connect to the state of the
+      discovery action (e.g. via ssh) and fetch precisely those
+      derivation closures needed. If the global set of derviaton grows
+      due to the number and nature of worker, this can help save on
+      upload time, restoration time and derviation packet size.
+
 outputs:
   hits:
-    description: "JSON object containing CI actions to run."
     value: ${{ steps.eval.outputs.json }}
+    description: "JSON object containing CI actions to run."
 
 runs:
   using: "composite"
   steps:
 
     - if: contains( runner.os, 'macos')
-      name: Install compatbile bash 5+
+      name: Install compatible bash 5+
       shell: bash
       run: |
         nix profile install nixpkgs/nixpkgs-22.11-darwin#bash
@@ -23,11 +39,13 @@ runs:
         EVALSTORE_EXPORT: ${{ runner.temp }}/eval-store
         OWNER_AND_REPO: ${{ github.repository }}
         SHA: ${{ github.sha }}
+        SKIP_DRV_EXPORT: ${{ inputs.ffBuildInstructions }}
       run: ${{ github.action_path }}/eval.sh
       shell: bash
 
     - uses: actions/cache/save@v3
       id: cache
+      if: inputs.ffBuildInstructions == 'false'
       with:
         path: ${{ runner.temp }}/eval-store
         key: drv-pack-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
