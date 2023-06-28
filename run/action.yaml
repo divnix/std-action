@@ -1,28 +1,11 @@
 name: "Standard Action Runner"
 description: "Build a target and run its action."
+author: "The Standard Authors"
 
 inputs:
   discovery_json:
     description: "JSON describing the action matrix, found in the discovery phase."
     required: true
-
-  nix_signing_key:
-    description: "Signing key used by Nix for package signing."
-    required: false
-  nix_cache:
-    description: "Nix cache to optionally cache (potentially signed) build results."
-    default: auto # auto refers to the local nix store, so nothing is uploaded by default
-    required: false
-  extra_nix_config:
-    description: "Configuration to append to the nix.conf."
-    required: false
-
-  # Authentication c/o Nix for additional private repositories
-  nix_access_tokens:
-    description: "Access Tokens to allow Nix to fetch private repositories."
-    required: false
-    default: github.com=${{ github.token }}
-
   # Discovery runner & builder host
   discovery_host:
     description: "SSH host URI for a persistent discovery runner."
@@ -36,99 +19,44 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Emplace Nix Key
+    - if: contains( runner.os, 'macos')
+      name: Install compatbile bash 5+
+      shell: bash
+      run: |
+        nix profile install nixpkgs/nixpkgs-22.11-darwin#bash
+
+    - name: Parse Input
       shell: bash
       env:
-        NIX_KEY_PATH: ${{ runner.temp }}/.nix-key
+        json: ${{ inputs.discovery_json }}
       run: |
-        # handle 🔑 material
-        if [[ -n '${{ inputs.nix_signing_key }}' ]]; then
-          echo "${{ inputs.nix_signing_key }}" >"$NIX_KEY_PATH"
-          chmod 0600 "$NIX_KEY_PATH"
-          echo "NIX_KEY_PATH=$NIX_KEY_PATH" >> "$GITHUB_ENV"
-        else
-          echo "NIX_KEY_PATH=" >> "$GITHUB_ENV"
-        fi
+        declare BUILDER action target cell block actionDrv
+        eval "$(jq -r '@sh "action=\(.action) target=\(.name) cell=\(.cell) block=\(.block) actionDrv=\(.actionDrv)"' <<< "$json" )"
+        echo "BUILDER=${{ inputs.builder_host }}" >> $GITHUB_ENV
+        echo "cell=$cell" >> $GITHUB_ENV
+        echo "block=$block" >> $GITHUB_ENV
+        echo "target=$target" >> $GITHUB_ENV
+        echo "action=$action" >> $GITHUB_ENV
+        echo "actionDrv=$actionDrv" >> $GITHUB_ENV
+        echo "actionDrvBasename=$(basename $actionDrv)" >> $GITHUB_ENV
 
-    - name: Restore Cache & Discovery Results
-      id: restore-cache
-      if: inputs.discovery_host == 'none' && runner.os != 'macOS'
-      uses: divnix/nix-cache-action@v3.0.11-nix
+    - uses: actions/cache/restore@v3
+      id: cache
       with:
-        path: |
-          /nix
-          ~/.cache/nix
-          ~root/.cache/nix
-        key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
+        path: ${{ runner.temp }}/eval-store
+        key: drv-pack-${{ runner.os }}-${{ runner.arch }}
+        fail-on-cache-miss: true
 
-    - name: Install Nix
-      uses: nixbuild/nix-quick-install-action@v21
-      with:
-        nix_conf: |
-          experimental-features = nix-command flakes
-          accept-flake-config = true
-          trusted-users = runner
-          access-tokens = ${{ inputs.nix_access_tokens }}
-          secret-key-files = ${{ env.NIX_KEY_PATH }}
-          ${{ inputs.extra_nix_config }}
-
-    - name: Restore Cache & Discovery Results
-      id: restore-cache-mac
-      if: inputs.discovery_host == 'none' && runner.os == 'macOS'
-      uses: divnix/nix-cache-action@v3.0.11-nix
-      with:
-        path: |
-          /nix
-          ~/.cache/nix
-          ~root/.cache/nix
-        key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
-
-    - name: Pull Derivations from Persistent Discovery Runner
-      if: inputs.discovery_host != 'none'
-      env:
-        PERSISTENT_DISCOVERY_HOST: ${{ inputs.discovery_host }}
-      run: |
-        # pull 🦌 from persistent discovery runner
-        ssh "$PERSISTENT_DISCOVERY_HOST" -- \
-          'nix-store --export \
-            $(nix-store --query --requisites \
-              ${{ fromJSON(inputs.discovery_json).actionDrv }}) \
-          | zstd' \
-        | unzstd \
-        | nix-store --import &>/dev/null
-      shell: bash
-
-    - name: Build ${{ fromJSON(inputs.discovery_json).name }}
+    - name: Execute on ${{ env.target }}
       id: build
-      env:
-        BUILDER: ${{ inputs.builder_host }}
-        JSON: ${{ inputs.discovery_json }}
-        OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/_build.sh
-        UNCACHED_FILE: ${{ runner.temp }}/uncached
-      run: ${{ github.action_path }}/build.sh
+      run: ${{ github.action_path }}/execute.sh
       shell: bash
-
-    - name: ${{ fromJSON(inputs.discovery_json).action }} ${{ fromJSON(inputs.discovery_json).name }}
-      if: fromJSON(inputs.discovery_json).action != 'build'
       env:
-        UNCACHED_FILE: ${{ runner.temp }}/uncached
-        BUILDER: ${{ inputs.builder_host }}
-        JSON: ${{ inputs.discovery_json }}
+        EVALSTORE_IMPORT: ${{ runner.temp }}/eval-store
+        # prj-spec <https://github.com/numtide/prj-spec>
         PRJ_ROOT: ${{ github.workspace }}
-        PRJ_DATA_DIR: ${{ github.workspace }}/.std
-        OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/_run.sh
-      run: ${{ github.action_path }}/run.sh
-      shell: bash
-
-    - name: Populate Cache
-      env:
-        CACHE: ${{ inputs.nix_cache }}
-        BUILDER: ${{ inputs.builder_host }}
-        UNCACHED_FILE: ${{ runner.temp }}/uncached
-        OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/_cache.sh
-      if: always() && env.CACHE != 'auto' && steps.build.outputs.has_uncached == 'true' && steps.build.conclusion == 'success'
-      run: ${{ github.action_path }}/cache.sh
-      shell: bash
+        PRJ_DATA_HOME: ${{ runner.temp }}/.data
+        PRJ_CACHE_HOME: ${{ runner.temp }}/.cache
+        PRJ_CONFIG_HOME: ${{ runner.temp }}/.config
+        PRJ_RUNTIME_DIR: ${{ runner.temp }}/.run
+        PRJ_PATH: ${{ runner.temp }}/.bin

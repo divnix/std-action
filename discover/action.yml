@@ -1,57 +1,33 @@
 name: "Standard Discovery"
 description: "Find out what to build & run in a Standard project."
-
-inputs:
-  # Authentication c/o Nix for additional private repositories
-  nix_access_tokens:
-    description: "Access Tokens to allow Nix to fetch private repositories."
-    required: false
-    default: github.com=${{ github.token }}
+author: "The Standard Authors"
 
 outputs:
   hits:
     description: "JSON object containing CI actions to run."
     value: ${{ steps.eval.outputs.json }}
-  nix_conf:
-    description: "Nix configuration of the flake."
-    value: ${{ steps.eval.outputs.nix_conf }}
 
 runs:
   using: "composite"
   steps:
-    - name: Cache Nix Store
-      id: cache-nix
-      if: startsWith(runner.name, 'discovery') == false
-      uses: divnix/nix-cache-action@v3.0.11-nix
-      with:
-        path: |
-          /nix
-          ~/.cache/nix
-          ~root/.cache/nix
-        key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
-        restore-keys: |
-          discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-
-          discovery-${{ runner.os }}-${{ runner.arch }}-
 
-
-    - name: Install Nix
-      uses: nixbuild/nix-quick-install-action@v21
-      if: startsWith(runner.name, 'discovery') == false
-      with:
-        nix_conf: |
-          experimental-features = nix-command flakes
-          accept-flake-config = true
-          trusted-users = runner
-          access-tokens = ${{ inputs.nix_access_tokens }}
+    - if: contains( runner.os, 'macos')
+      name: Install compatbile bash 5+
+      shell: bash
+      run: |
+        nix profile install nixpkgs/nixpkgs-22.11-darwin#bash
 
     - name: Discover
       id: eval
       env:
-        TMPDIR: ${{ runner.temp }}
-        GH_TOKEN: ${{ github.token }}
+        EVALSTORE_EXPORT: ${{ runner.temp }}/eval-store
         OWNER_AND_REPO: ${{ github.repository }}
         SHA: ${{ github.sha }}
-        OS: ${{ runner.os }}
-        SCRIPT: ${{ github.action_path }}/_eval.sh
       run: ${{ github.action_path }}/eval.sh
       shell: bash
+
+    - uses: actions/cache/save@v3
+      id: cache
+      with:
+        path: ${{ runner.temp }}/eval-store
+        key: drv-pack-${{ runner.os }}-${{ runner.arch }}
