@@ -30,4 +30,4 @@ runs:
       id: cache
       with:
         path: ${{ runner.temp }}/eval-store
-        key: drv-pack-${{ runner.os }}-${{ runner.arch }}
+        key: drv-pack-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
