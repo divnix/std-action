@@ -4,7 +4,14 @@ set -e
 set -o pipefail
 
 #shellcheck disable=SC2154
-cat "$EVALSTORE_IMPORT/$(basename $actionDrv).zst" | unzstd | nix-store --import &>/dev/null
+
+if [[ "$DRV_IMPORT_FROM_DISCOVERY" == "false" ]]; then
+   cat "$EVALSTORE_IMPORT/$(basename $actionDrv).zst" \
+   | unzstd | nix-store --import &>/dev/null
+else
+   ssh discovery -- "nix-store --query --requisites $actionDrv | nix-store --stdin --export | zstd" \
+   | unzstd | nix-store --import &>/dev/null
+fi
 
 #shellcheck disable=SC2154
 echo "::group::🏗️ build //$cell/$block/$target"
