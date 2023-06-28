@@ -8,11 +8,6 @@ inputs:
     required: true
     default: ${{ toJSON(matrix.target) }}
 
-  builder_host:
-    description: "Nix store URI of a remote builder."
-    default: auto
-    required: false
-
   ffBuildInstructions:
     required: false
     default: false
@@ -38,9 +33,8 @@ runs:
       env:
         json: ${{ inputs.discovery_json }}
       run: |
-        declare BUILDER action target cell block actionDrv
+        declare action target cell block actionDrv
         eval "$(jq -r '@sh "action=\(.action) target=\(.name) cell=\(.cell) block=\(.block) actionDrv=\(.actionDrv)"' <<< "$json" )"
-        echo "BUILDER=${{ inputs.builder_host }}" >> $GITHUB_ENV
         echo "cell=$cell" >> $GITHUB_ENV
         echo "block=$block" >> $GITHUB_ENV
         echo "target=$target" >> $GITHUB_ENV

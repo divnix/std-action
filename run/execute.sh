@@ -17,7 +17,7 @@ fi
 echo "::group::🏗️ build //$cell/$block/$target"
 
 #shellcheck disable=SC2086
-command nix-build --eval-store auto --store "$BUILDER" "$actionDrv"
+command nix-build --eval-store auto "$actionDrv"
 
 echo "::endgroup::"
 
@@ -29,20 +29,9 @@ if [[ "$action" != "build" ]]; then
   #shellcheck disable=SC2154
   echo "::group::🏍️️ $action //$cell/$block/$target"
   {
-    if [[ $BUILDER != auto ]]; then
-      command nix copy --from "$BUILDER" "$actionDrv"
-    else
-      command nix-build "$actionDrv" --no-out-link
-    fi
-
-    out="$(command nix derivation show "$actionDrv^*" | command jq -r '.[].outputs.out.path')"
-    if [[ ! -e $out ]]; then
-      command nix-build "$actionDrv" --no-out-link
-    fi
-
     # this trick preserves set -e & set -o pipefail from above
     #shellcheck disable=SC1090
-    function _run() { . "$out"; }
+    function _run() { . ./result; }
     _run
   }
   echo "::endgroup::"
