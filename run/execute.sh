@@ -9,7 +9,7 @@ if [[ "$DRV_IMPORT_FROM_DISCOVERY" == "false" ]]; then
    cat "$EVALSTORE_IMPORT/$(basename $actionDrv).zst" \
    | unzstd | nix-store --import &>/dev/null
 else
-   ssh discovery -- "nix-store --query --requisites $actionDrv | nix-store --stdin --export | zstd" \
+   ssh discovery -- 'nix-store --export $(nix-store --query --requisites '$actionDrv') | zstd' \
    | unzstd | nix-store --import &>/dev/null
 fi
 
