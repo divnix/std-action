@@ -142,7 +142,7 @@ echo "::group::📞️ Pass artifacts to the build matrix ..."
   if [[ "$SKIP_DRV_EXPORT" == "false" ]]; then
     command mkdir -p "$EVALSTORE_EXPORT"
     for drv in $(command jq --compact-output --raw-output '.[].actionDrv' <<<"$PROVISIONED"); do
-       nix-store --query --requisites "$drv" | command nix-store --stdin --export | command zstd > "$EVALSTORE_EXPORT/$(basename $drv).zst"
+       command nix-store --query --requisites "$drv" | command nix-store --stdin --export | command zstd > "$EVALSTORE_EXPORT/$(basename $drv).zst"
     done
   fi
 }
