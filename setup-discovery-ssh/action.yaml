@@ -1,0 +1,39 @@
+name: "Setup SSH to Discovery"
+description: "Configure SSH access to the discovery host and fetch build instructions (derivaitons)."
+author: "The Standard Authors"
+
+inputs:
+  ssh_key:
+    required: true
+    description: |
+      The private SSH key used to authenticate with the Discovery host.
+
+      You should not add your private key directly to the workflow file but
+      instead define a GitHub Secret for it, to avoid mistakenly sharing your
+      key with others.
+
+      It is advisable to create a new SSH key specifically for use within GitHub
+      (or even per repository or workflow). That way you can revoke access to
+      your Discovery host in a fine-grained fashion.
+
+  user_name:
+    required: true
+    description: |
+      The user name to connect with.
+
+  ssh_known_hosts_entry:
+    required: true
+    description: |
+      The known host entry to use for the Discovery host.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up SSH access to the Discovery host
+      id: setup
+      run: ${{ github.action_path }}/setup.sh
+      shell: bash
+      env:
+        DISCOVERY_USER_NAME: ${{ inputs.user_name }}
+        DISCOVERY_SSH_KNOWN_HOSTS_ENTRY: ${{ inputs.ssh_known_hosts_entry }}
+        DISCOVERY_SSH_KEY: ${{ inputs.ssh_key }}
