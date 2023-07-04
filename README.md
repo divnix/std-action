@@ -77,8 +77,8 @@ jobs:
       hits: ${{ steps.discovery.outputs.hits }}
     runs-on: ubuntu-latest
     steps:
-      # Important: use this as it also detects flake configuration
-      - uses: blaggacao/nix-quick-install-action@detect-nix-flakes-config
+      # Important: use v25 or above as it also detects flake configuration
+      - uses: nixbuild/nix-quick-install-action@master
       # if you want to use nixbuild
       - uses: nixbuild/nixbuild-action@v17
         with:
@@ -98,8 +98,8 @@ jobs:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).packages.build }}
     steps:
-      # Important: use this as it also detects flake configuration
-      - uses: blaggacao/nix-quick-install-action@detect-nix-flakes-config
+      # Important: use v25 or above as it also detects flake configuration
+      - uses: nixbuild/nix-quick-install-action@master
       # if you want to use nixbuild
       - uses: nixbuild/nixbuild-action@v17
         with:
