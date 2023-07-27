@@ -19,6 +19,17 @@ inputs:
       host. Access to that discovery host with alias 'discovery' must be
       provided indendently via SSH configuraiton.
 
+  remoteStore:
+    required: false
+    default: false
+    description: |
+      When set, builds are made on this remote store, e.g. inside a build server farm.
+
+      Can be set to any of the values available for the `--store` nix command line flag.
+      For example, to connect to nixbuild.net, simply set it to `ssh-ng://eu.nixbuild.net` \*.
+
+      \* If using nixbuild.net, in particular, also make sure to configure their `nixbuild-action`.
+
 runs:
   using: "composite"
   steps:
@@ -49,6 +60,12 @@ runs:
         key: drv-pack-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
         fail-on-cache-miss: true
 
+    - name: Setup fake tty
+      shell: bash
+      run: |
+        echo "TERM=xterm-256color" >> $GITHUB_ENV
+        nix --quiet profile install nixpkgs#faketty
+
     - name: Execute on ${{ env.target }}
       id: build
       run: ${{ github.action_path }}/execute.sh
@@ -56,6 +73,8 @@ runs:
       env:
         EVALSTORE_IMPORT: ${{ runner.temp }}/eval-store
         DRV_IMPORT_FROM_DISCOVERY: ${{ inputs.ffBuildInstructions }}
+        REMOTE_STORE: ${{ inputs.remoteStore }}
+
         # prj-spec <https://github.com/numtide/prj-spec>
         PRJ_ROOT: ${{ github.workspace }}
         PRJ_DATA_HOME: ${{ runner.temp }}/.data
