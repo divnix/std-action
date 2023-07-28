@@ -44,7 +44,7 @@ function provision() {
 
   for action in $(command jq --compact-output --raw-output '.|keys[]' <<<"$by_action"); do
     readarray -t actions < <(command jq --compact-output --raw-output ".${action}[] | @base64" <<<"${by_action}")
-    echo "Check proviso for all ${#actions[@]} '$action' action(s) ..."
+    echo "Check proviso for ${#actions[@]} '$action' action(s) ..."
     # this trick doesn't require proviso to be executable, as created by builtins.toFile
     function _proviso() {
       _jq() { echo "${2}" | command base64 --decode | command jq --compact-output --raw-output "${1}"; }
