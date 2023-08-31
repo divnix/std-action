@@ -37,3 +37,8 @@ runs:
         DISCOVERY_USER_NAME: ${{ inputs.user_name }}
         DISCOVERY_SSH_KNOWN_HOSTS_ENTRY: ${{ inputs.ssh_known_hosts_entry }}
         DISCOVERY_SSH_KEY: ${{ inputs.ssh_key }}
+
+runs:
+  using: 'node16'
+  main: 'setup.js'
+  post: 'cleanup.js'
