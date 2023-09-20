@@ -59,6 +59,7 @@ function provision() {
           echo "$action"
         else
           echo >&2 " - drop it."
+          jq -c '. + {skipped: true}' <<< "$action"
         fi
       else
         echo >&2 " - take it (no proviso)."
