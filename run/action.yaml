@@ -13,9 +13,6 @@ inputs:
     description: "Nix cache to optionally cache (potentially signed) build results."
     default: auto # auto refers to the local nix store, so nothing is uploaded by default
     required: false
-  extra_nix_config:
-    description: "Configuration to append to the nix.conf."
-    required: false
 
   # Authentication c/o Nix for additional private repositories
   nix_access_tokens:
@@ -60,17 +57,6 @@ runs:
           ~/.cache/nix
           ~root/.cache/nix
         key: discovery-${{ runner.os }}-${{ runner.arch }}-${{ github.ref }}-${{ github.sha }}
-
-    - name: Install Nix
-      uses: nixbuild/nix-quick-install-action@v21
-      with:
-        nix_conf: |
-          experimental-features = nix-command flakes
-          accept-flake-config = true
-          trusted-users = runner
-          access-tokens = ${{ inputs.nix_access_tokens }}
-          secret-key-files = ${{ env.NIX_KEY_PATH }}
-          ${{ inputs.extra_nix_config }}
 
     - name: Restore Cache & Discovery Results
       id: restore-cache-mac

@@ -26,9 +26,7 @@ function run() {
     nix-build "$drv" --no-out-link
   fi
 
-  # this trick preserves set -e & set -o pipefail from above
-  function _run() { . "$out"; }
-  _run
+  exec "$out"
 }
 
 run
