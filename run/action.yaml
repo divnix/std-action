@@ -34,14 +34,23 @@ inputs:
     default: auto
     required: false
 
+  extra_nix_config:
+    description: "Nix config to use."
+    required: false
+
 runs:
   using: "composite"
   steps:
-    - name: Emplace Nix Key
+    - name: Setup Config & Emplace Nix Key
       shell: bash
       env:
         NIX_KEY_PATH: ${{ runner.temp }}/.nix-key
       run: |
+        if [[ -n '${{ inputs.extra_nix_config }}']]; then
+          nix_conf="$(mktemp -d)/nix.conf"
+          echo "${{ inputs.extra_nix_config }}" > "$nix_conf"
+          echo "NIX_USER_CONF_FILES=$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES" >> "$GITHUB_ENV"
+        fi
         # handle 🔑 material
         if [[ -n '${{ inputs.nix_signing_key }}' ]]; then
           echo "${{ inputs.nix_signing_key }}" >"$NIX_KEY_PATH"

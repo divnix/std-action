@@ -38,7 +38,6 @@ accept-flake-config = true
   "
   NIX_CONFIG+=$(nix eval --raw --impure --expr '(import '"$flake_file"').nixConfig or {}' --apply "$(<"${BASH_SOURCE[0]%/*}/nix_config.nix")")
   echo "$NIX_CONFIG" > "$nix_conf"
-  unset NIX_CONFIG
   NIX_USER_CONF_FILES="$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES"
   export NIX_USER_CONF_FILES
 
