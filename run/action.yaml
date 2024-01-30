@@ -5,6 +5,10 @@ inputs:
   discovery_json:
     description: "JSON describing the action matrix, found in the discovery phase."
     required: true
+  use_cache:
+    description: "Whether to use the cache"
+    required: true
+    default: "true"
 
   nix_signing_key:
     description: "Signing key used by Nix for package signing."
@@ -49,7 +53,7 @@ runs:
 
     - name: Restore Cache & Discovery Results
       id: restore-cache
-      if: inputs.discovery_host == 'none' && runner.os != 'macOS'
+      if: inputs.discovery_host == 'none' && runner.os != 'macOS' && inputs.use_cache != 'false'
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
@@ -60,7 +64,7 @@ runs:
 
     - name: Restore Cache & Discovery Results
       id: restore-cache-mac
-      if: inputs.discovery_host == 'none' && runner.os == 'macOS'
+      if: inputs.discovery_host == 'none' && runner.os == 'macOS' && inputs.use_cache != 'false'
       uses: divnix/nix-cache-action@v3.0.11-nix
       with:
         path: |
