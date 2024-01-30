@@ -33,10 +33,13 @@ inputs:
     description: "Nix store URI of a remote builder."
     default: auto
     required: false
-
   extra_nix_config:
     description: "Nix config to use."
     required: false
+  check_uncached:
+    description: "Check which paths are uncached"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -105,6 +108,7 @@ runs:
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_build.sh
         UNCACHED_FILE: ${{ runner.temp }}/uncached
+        CHECK: ${{ inputs.check_uncached }}
       run: ${{ github.action_path }}/build.sh
       shell: bash
 
