@@ -15,7 +15,7 @@ function upload() {
     fi
   fi
 
-  cat "$UNCACHED_FILE" | xargs -- nix copy --from "$BUILDER" --to "$CACHE"
+  < "$UNCACHED_FILE" nix copy --stdin --from "$BUILDER" --to "$CACHE"
 }
 
 echo "::group::🌲 Recycle work into cache ..."
