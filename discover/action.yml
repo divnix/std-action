@@ -11,6 +11,9 @@ inputs:
     description: "Whether to use the cache"
     required: true
     default: "true"
+  filter:
+    description: "Whether to filter with Proviso"
+    default: "true"
 
 outputs:
   hits:
@@ -43,5 +46,6 @@ runs:
         SHA: ${{ github.sha }}
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_eval.sh
+        FILTER: ${{ inputs.filter }}
       run: ${{ github.action_path }}/eval.sh
       shell: bash

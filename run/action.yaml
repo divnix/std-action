@@ -46,7 +46,7 @@ runs:
       env:
         NIX_KEY_PATH: ${{ runner.temp }}/.nix-key
       run: |
-        if [[ -n '${{ inputs.extra_nix_config }}']]; then
+        if [[ -n '${{ inputs.extra_nix_config }}' ]]; then
           nix_conf="$(mktemp -d)/nix.conf"
           echo "${{ inputs.extra_nix_config }}" > "$nix_conf"
           echo "NIX_USER_CONF_FILES=$nix_conf:${XDG_CONFIG_HOME:-$HOME/.config}/nix/nix.conf:$NIX_USER_CONF_FILES" >> "$GITHUB_ENV"

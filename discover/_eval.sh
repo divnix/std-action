@@ -77,7 +77,7 @@ function provision() {
   for action in $($jq --raw-output '.|keys[]' <<<"$by_action"); do
     actions=$($jq ".${action}" <<<"${by_action}")
     proviso=$($jq --raw-output ".${action}[0].proviso|strings" <<<"${by_action}")
-    if [[ -n $proviso ]]; then
+    if [[ -n $proviso ]] && [[ $FILTER != false ]]; then
       echo "::debug::Running ${proviso##*/}"
       # this trick doesn't require proviso to be executable, as created by builtins.toFile
       function _proviso() { . "$proviso"; }
