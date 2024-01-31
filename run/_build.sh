@@ -47,7 +47,7 @@ echo "::endgroup::"
 echo "::group::🧮 Collect what will be uploaded to the cache ..."
 if [[ $CHECK != false ]]; then
   calc_uncached
-else
+elif ! curl -f "https://cache.nixos.org/$(basename "$(nix-store -q "$target" | awk -F- '{print $1}')").narinfo"; then
   echo "$target^*" > "$UNCACHED_FILE"
   echo "has_uncached=true" >>"$GITHUB_OUTPUT"
 fi
