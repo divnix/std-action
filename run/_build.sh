@@ -40,17 +40,16 @@ function build() {
   nix-build --eval-store auto --store "$BUILDER" "$target"
 }
 
-echo "::group::📞️ Get info from discovery ..."
-echo "... already here :-)"
-echo "::endgroup::"
-
-echo "::group::🧮 Collect what will be uploaded to the cache ..."
 if [[ $CHECK != false ]]; then
+  echo "::group::🧮 Collect what will be uploaded to the cache ..."
   calc_uncached
+  echo "::endgroup::"
+else
+  echo "$target^*" > "$UNCACHED_FILE"
+  echo "has_uncached=true" >>"$GITHUB_OUTPUT"
 fi
-echo "::endgroup::"
 
-if [[ -n ${uncached[*]} ]]; then
+if [[ -n ${uncached[*]} || $CHECK == false ]]; then
   echo "::group::🏗️ Build target ..."
   build
   echo "::endgroup::"
