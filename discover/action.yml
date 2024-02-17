@@ -50,5 +50,6 @@ runs:
         OS: ${{ runner.os }}
         SCRIPT: ${{ github.action_path }}/_eval.sh
         FILTER: ${{ inputs.filter }}
+        ACCESS_TOKENS: ${{ inputs.nix_access_tokens }}
       run: ${{ github.action_path }}/eval.sh
       shell: bash
