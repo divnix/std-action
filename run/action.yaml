@@ -52,7 +52,7 @@ runs:
         echo "action=$action" >> $GITHUB_ENV
         echo "actionDrv=$actionDrv" >> $GITHUB_ENV
 
-    - uses: actions/cache/restore@v3
+    - uses: actions/cache/restore@v4
       id: cache
       if: inputs.ffBuildInstructions == 'false'
       with:
