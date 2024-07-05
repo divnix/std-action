@@ -31,6 +31,8 @@ if ssh-keygen -y -f "$ssh_key_file" &>/dev/null; then
   ssh-add -q "$ssh_key_file" && rm "$ssh_key_file"
   # Auth agent socket to ssh config
   echo "IdentityAgent $SSH_AUTH_SOCK" >> "$SSH_CONFIG_FILE"
+  # Save pid to cleanup in post step
+  echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_STATE"
 else
   echo -e >&2 \
 "Your SSH key is not a valid OpenSSH private key\n"\
