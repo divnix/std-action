@@ -30,6 +30,11 @@ inputs:
 
       \* If using nixbuild.net, in particular, also make sure to configure their `nixbuild-action`.
 
+outputs:
+  out:
+    value: ${{ steps.build.outputs.json }}
+    description: "JSON object from actions."
+
 runs:
   using: "composite"
   steps:
